@@ -54,64 +54,49 @@ Declared in `client/src/styles/theme.css`:
 
 ---
 
-## 4. How to Host 100% Freely with GitHub (Auto-Deploy on Edit)
+## 4. How to Host 100% Freely on Vercel (Auto-Deploy on GitHub Edit)
 
-Because the project is connected to GitHub, whenever you edit or commit code on GitHub, your live app will automatically rebuild and deploy for free!
+Because you already use Vercel for ShiftPe, the repository is configured with a unified [`vercel.json`](file:///d:/shiftpe_app/CRM/CRM-mark1/vercel.json) and serverless function adapter ([`api/index.js`](file:///d:/shiftpe_app/CRM/CRM-mark1/api/index.js)):
+- **Frontend (React/Vite)**: Deployed to Vercel's global edge network (`client/dist`).
+- **Backend (Express API)**: Runs as a Vercel Serverless Function handling all `/api/*` endpoints.
+- **Custom Domain**: Easily map `crm.shiftpe.com` in Vercel Domain Settings.
 
-### Step 1: Push Your Code to GitHub
+### Step 1: Push Code to GitHub
+
+Open your terminal in `d:\shiftpe_app\CRM\CRM-mark1` and push the branch to your GitHub repository:
 
 ```bash
-# 1. Initialize git
-git init -b main
-
-# 2. Stage all files (sensitive .env files are automatically excluded by .gitignore)
-git add .
-
-# 3. Commit your codebase
-git commit -m "Initial commit: ShiftPe CRM Portal with Dynamic Access & Customer Wiki"
-
-# 4. Create a new empty repository on your GitHub account (e.g. shiftpe-crm)
-
-# 5. Link and push to GitHub
-git remote add origin https://github.com/<YOUR_GITHUB_USERNAME>/shiftpe-crm.git
 git push -u origin main
 ```
 
 ---
 
-### Step 2: Deploy 100% Freely on Render (Single Full-Stack Web Service)
+### Step 2: Import & Deploy on Vercel (1-Click)
 
-Render offers a generous **Free Tier** for Web Services:
-
-1. Go to [render.com](https://render.com) and sign in with your GitHub account.
-2. Click **New +** &rarr; **Web Service**.
-3. Select your `shiftpe-crm` GitHub repository.
-4. Configure the service:
-   - **Name**: `shiftpe-crm` (or your chosen name)
-   - **Environment**: `Node`
-   - **Build Command**: `npm run install:all && npm run build`
-   - **Start Command**: `npm start`
-   - **Instance Type**: `Free`
-5. Click **Advanced** &rarr; **Add Environment Variables**:
+1. Go to **[vercel.com/dashboard](https://vercel.com/dashboard)**.
+2. Click **Add New...** &rarr; **Project**.
+3. Select the repository: `tensertechnologie-blip/shiftpe-crm`.
+4. Vercel automatically reads [`vercel.json`](file:///d:/shiftpe_app/CRM/CRM-mark1/vercel.json) with build command `npm run build` and output directory `client/dist`.
+5. Under **Environment Variables**, add:
    ```env
    NODE_ENV=production
-   PORT=5000
    MONGODB_URI=mongodb+srv://tensertechnologie_db_user:dCSaOlUUOKulokYv@cluster0.hipta7v.mongodb.net/shiftpe_crm?retryWrites=true&w=majority
    JWT_SECRET=shiftpe_super_secret_jwt_key_2026_dev_prod_auth_token_9999
-   CLIENT_ORIGIN=https://<your-render-app-name>.onrender.com
+   CLIENT_ORIGIN=https://<your-project-name>.vercel.app
    CEO_EMAIL=ajay.founder@shiftpe.in
    CEO_PASSWORD=ShiftPeCeo2026!
    CEO_NAME=Ajay (Founder & CEO)
    CEO_PHONE=+91 9876543210
    ```
 6. In **MongoDB Atlas** &rarr; **Security** &rarr; **Network Access**:
-   - Add `0.0.0.0/0` (Allow access from anywhere) so Render cloud instances can connect seamlessly.
-7. Click **Create Web Service**.
-   - Render will build both the frontend and backend, serving your full portal at `https://<your-app>.onrender.com`!
+   - Ensure `0.0.0.0/0` is allowed so Vercel's serverless nodes can reach Atlas.
+7. Click **Deploy**.
 
 ---
 
-### Step 3: Edit Directly on GitHub
+### Step 3: Edit on GitHub & Instant Continuous Deployment
+
+Every time you edit code directly on GitHub or push a commit, Vercel triggers a new build and deploys it live in seconds!
 
 Whenever you edit files on GitHub (via GitHub's web editor `.` key or by pushing commits), Render detects the commit on the `main` branch and automatically redeploys your portal!
 
