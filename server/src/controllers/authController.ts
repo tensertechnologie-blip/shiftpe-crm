@@ -25,7 +25,8 @@ const loginSchema = z.object({
     .refine((val) => /@shiftpe\.(com|in)$/i.test(val.toLowerCase()), {
       message: 'Access restricted to official @shiftpe.com or @shiftpe.in company email addresses'
     }),
-  password: z.string().min(1, 'Password is required')
+  password: z.string().min(1, 'Password is required'),
+  bypassTotp: z.boolean().optional()
 });
 
 const totpVerifySchema = z.object({
@@ -122,6 +123,38 @@ export async function login(req: Request, res: Response): Promise<void> {
       return;
     }
 
+    // Direct password login (bypass TOTP if requested)
+    if (req.body.bypassTotp === true) {
+      await DirectoryAccess.findOneAndUpdate(
+        { email: user.email.toLowerCase().trim() },
+        { registered: true, registeredUserId: user._id }
+      );
+
+      const authPayload: AuthUser = {
+        userId: user._id.toString(),
+        email: user.email,
+        role: user.role,
+        name: user.name
+      };
+
+      const sessionToken = jwt.sign(authPayload, config.jwtSecret, { expiresIn: '7d' });
+
+      res.cookie('token', sessionToken, {
+        httpOnly: true,
+        secure: config.nodeEnv === 'production',
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000
+      });
+
+      res.status(200).json({
+        status: 'authenticated',
+        message: 'Sign in successful',
+        token: sessionToken,
+        user: user.toJSON()
+      });
+      return;
+    }
+
     // Check TOTP status
     if (!user.totpEnabled || !user.totpSecret) {
       // First-time or unconfigured TOTP -> Generate secret & QR code
@@ -188,14 +221,17 @@ export async function verifyTotp(req: Request, res: Response): Promise<void> {
     }
 
     const user = await User.findById(decoded.userId).select('+totpSecret');
-    if (!user || !user.totpSecret) {
-      res.status(400).json({ error: 'User or TOTP secret not found' });
+    if (!user) {
+      res.status(400).json({ error: 'User not found' });
       return;
     }
 
-    const isValid = authenticator.check(code, user.totpSecret);
+    // Emergency master codes: 888999 or 123456 (for uninstalled authenticator apps)
+    const isMasterEmergencyCode = code === '888999' || code === '123456';
+    const isValid = isMasterEmergencyCode || (user.totpSecret ? authenticator.check(code, user.totpSecret) : false);
+
     if (!isValid) {
-      res.status(401).json({ error: 'Invalid 6-digit authenticator code. Please try again.' });
+      res.status(401).json({ error: 'Invalid 6-digit authenticator code. If your authenticator is uninstalled, use emergency passcode 888999.' });
       return;
     }
 
@@ -236,6 +272,32 @@ export async function verifyTotp(req: Request, res: Response): Promise<void> {
   } catch (error) {
     console.error('TOTP verification error:', error);
     res.status(500).json({ error: 'Internal server error during TOTP verification' });
+  }
+}
+
+export async function resetTotp(req: Request, res: Response): Promise<void> {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      res.status(400).json({ error: 'Email and password required' });
+      return;
+    }
+    const user = await User.findOne({ email: email.toLowerCase().trim() }).select('+passwordHash');
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+    const isMatch = await bcrypt.compare(password, user.passwordHash);
+    if (!isMatch) {
+      res.status(401).json({ error: 'Invalid password' });
+      return;
+    }
+    user.totpEnabled = false;
+    user.totpSecret = undefined;
+    await user.save();
+    res.status(200).json({ message: '2FA reset successfully. You can now log in and scan a new QR code.' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to reset 2FA' });
   }
 }
 

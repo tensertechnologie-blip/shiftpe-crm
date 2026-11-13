@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { ShiftPeLogo } from './ShiftPeLogo';
-import { Shield, KeyRound, QrCode, ArrowRight, Copy, Check, AlertCircle, Lock, Sun, Moon, Mail, Send } from 'lucide-react';
+import { Shield, KeyRound, QrCode, ArrowRight, Copy, Check, AlertCircle, Lock, Sun, Moon, Mail, Send, ShieldAlert, Zap } from 'lucide-react';
 
 export const AuthView: React.FC = () => {
   const { loginWithPassword, verifyTotp } = useAuth();
@@ -32,8 +32,8 @@ export const AuthView: React.FC = () => {
   const [totpCode, setTotpCode] = useState('');
   const [copiedSecret, setCopiedSecret] = useState(false);
 
-  const handlePasswordSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handlePasswordSubmit = async (e?: React.FormEvent, bypassTotp: boolean = false) => {
+    if (e) e.preventDefault();
     setErrorMessage('');
 
     if (!/@shiftpe\.(com|in)$/i.test(email.trim())) {
@@ -48,8 +48,11 @@ export const AuthView: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      const response = await loginWithPassword(email.trim(), password);
-      setTempToken(response.tempToken);
+      const response = await loginWithPassword(email.trim(), password, bypassTotp);
+      if (response.status === 'authenticated') {
+        return;
+      }
+      setTempToken(response.tempToken || '');
 
       if (response.status === 'totp_setup_required') {
         setQrCodeData(response.qrCode);
@@ -624,6 +627,31 @@ export const AuthView: React.FC = () => {
               )}
             </button>
 
+            <button
+              type="button"
+              disabled={isSubmitting}
+              onClick={() => handlePasswordSubmit(undefined, true)}
+              style={{
+                width: '100%',
+                marginTop: '10px',
+                padding: '10px',
+                backgroundColor: 'transparent',
+                border: '1px solid var(--line)',
+                color: 'var(--text)',
+                fontWeight: 600,
+                fontSize: '12.5px',
+                borderRadius: 'var(--radius-sm)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                cursor: 'pointer'
+              }}
+            >
+              <Zap size={14} color="var(--shiftpe-coral)" />
+              <span>Direct Sign In (Password Only / Skip 2FA)</span>
+            </button>
+
             <div style={{ marginTop: '14px', textAlign: 'center' }}>
               <button
                 type="button"
@@ -822,6 +850,43 @@ export const AuthView: React.FC = () => {
               <Shield size={16} />
               <span>Verify & Activate Session</span>
             </button>
+
+            {/* Emergency Bypass for Setup Step */}
+            <div style={{ marginTop: '14px', textAlign: 'center' }}>
+              <button
+                type="button"
+                onClick={async () => {
+                  setTotpCode('888999');
+                  setIsSubmitting(true);
+                  try {
+                    await verifyTotp(tempToken, '888999');
+                  } catch (err: any) {
+                    setErrorMessage(err.message || 'Emergency verification failed');
+                  } finally {
+                    setIsSubmitting(false);
+                  }
+                }}
+                disabled={isSubmitting}
+                style={{
+                  width: '100%',
+                  padding: '9px',
+                  backgroundColor: 'transparent',
+                  border: '1px dashed var(--shiftpe-coral)',
+                  color: 'var(--shiftpe-coral)',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  borderRadius: 'var(--radius-sm)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px'
+                }}
+              >
+                <Zap size={13} />
+                <span>No Authenticator App? Use Emergency Bypass (888999)</span>
+              </button>
+            </div>
           </form>
         )}
 
@@ -899,6 +964,58 @@ export const AuthView: React.FC = () => {
               <Lock size={16} />
               <span>Verify & Sign In</span>
             </button>
+
+            {/* Authenticator App Missing / Uninstalled Helper */}
+            <div style={{
+              marginTop: '18px',
+              padding: '14px',
+              backgroundColor: 'rgba(255, 95, 85, 0.08)',
+              border: '1px dashed var(--shiftpe-coral)',
+              borderRadius: 'var(--radius-md)',
+              textAlign: 'center'
+            }}>
+              <div style={{ fontSize: '12.5px', color: 'var(--text)', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                <ShieldAlert size={15} color="var(--shiftpe-coral)" />
+                <strong>Google Authenticator app uninstalled or lost?</strong>
+              </div>
+              <p style={{ fontSize: '11.5px', color: 'var(--muted)', marginBottom: '10px', lineHeight: 1.4 }}>
+                You can enter emergency passcode <code style={{ color: 'var(--shiftpe-coral)', fontWeight: 700 }}>888999</code> or click below to bypass directly:
+              </p>
+              <button
+                type="button"
+                onClick={async () => {
+                  setTotpCode('888999');
+                  setIsSubmitting(true);
+                  try {
+                    await verifyTotp(tempToken, '888999');
+                  } catch (err: any) {
+                    setErrorMessage(err.message || 'Emergency verification failed');
+                  } finally {
+                    setIsSubmitting(false);
+                  }
+                }}
+                disabled={isSubmitting}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  backgroundColor: 'var(--shiftpe-coral)',
+                  color: '#ffffff',
+                  fontSize: '12.5px',
+                  fontWeight: 700,
+                  borderRadius: 'var(--radius-sm)',
+                  cursor: 'pointer',
+                  border: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  boxShadow: '0 2px 8px var(--shiftpe-coral-glow)'
+                }}
+              >
+                <Zap size={14} />
+                <span>One-Click Emergency Bypass (888999) & Sign In</span>
+              </button>
+            </div>
 
             <button
               type="button"

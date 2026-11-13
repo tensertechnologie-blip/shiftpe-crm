@@ -89,10 +89,12 @@ export interface WikiArticleItem {
 }
 
 export interface LoginResponse {
-  status: 'totp_setup_required' | 'totp_required';
+  status: 'totp_setup_required' | 'totp_required' | 'authenticated';
   message: string;
-  tempToken: string;
+  tempToken?: string;
   qrCode?: string;
   manualSecret?: string;
-  email: string;
+  email?: string;
+  token?: string;
+  user?: User;
 }

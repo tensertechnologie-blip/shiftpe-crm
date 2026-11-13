@@ -5,8 +5,9 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   isLoading: boolean;
-  loginWithPassword: (email: string, password: string) => Promise<LoginResponse>;
+  loginWithPassword: (email: string, password: string, bypassTotp?: boolean) => Promise<LoginResponse>;
   verifyTotp: (tempToken: string, code: string) => Promise<User>;
+  resetTotp: (email: string, password: string) => Promise<string>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   updateUserState: (updatedUser: User) => void;
@@ -54,8 +55,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     fetchCurrentUser();
   }, []);
 
-  const loginWithPassword = async (email: string, password: string): Promise<LoginResponse> => {
+  const loginWithPassword = async (email: string, password: string, bypassTotp?: boolean): Promise<LoginResponse> => {
     const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ email, password, bypassTotp })
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to sign in. Please verify your credentials.');
+    }
+
+    if (data.status === 'authenticated' && data.token && data.user) {
+      setToken(data.token);
+      setUser(data.user);
+      localStorage.setItem('shiftpe_token', data.token);
+    }
+
+    return data as LoginResponse;
+  };
+
+  const resetTotp = async (email: string, password: string): Promise<string> => {
+    const res = await fetch('/api/auth/reset-totp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -64,10 +87,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const data = await res.json();
     if (!res.ok) {
-      throw new Error(data.error || 'Failed to sign in. Please verify your credentials.');
+      throw new Error(data.error || 'Failed to reset 2FA');
     }
-
-    return data as LoginResponse;
+    return data.message;
   };
 
   const verifyTotp = async (tempToken: string, code: string): Promise<User> => {
@@ -120,6 +142,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading,
         loginWithPassword,
         verifyTotp,
+        resetTotp,
         logout,
         refreshUser,
         updateUserState
