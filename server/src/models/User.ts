@@ -20,6 +20,8 @@ export interface IUser extends Document {
   onboardingCompleted: boolean;
   onboardingSkipped: boolean;
   isTemporaryPassword: boolean;
+  failedAttempts: number;
+  lockUntil?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -58,6 +60,8 @@ const userSchema = new Schema<IUser>(
     onboardingCompleted: { type: Boolean, default: false },
     onboardingSkipped: { type: Boolean, default: false },
     isTemporaryPassword: { type: Boolean, default: false },
+    failedAttempts: { type: Number, default: 0 },
+    lockUntil: { type: Date },
     status: {
       type: String,
       enum: ['active', 'inactive'],

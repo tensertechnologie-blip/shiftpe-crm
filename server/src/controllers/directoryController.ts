@@ -189,6 +189,13 @@ export async function revokeAccess(req: AuthenticatedRequest, res: Response): Pr
       return;
     }
 
+    // Check if target user has role 'ceo'
+    const userDoc = await User.findOne({ email: normalizedEmail });
+    if (userDoc && userDoc.role === 'ceo') {
+      res.status(403).json({ error: 'Executive accounts cannot be revoked here.' });
+      return;
+    }
+
     const entry = await DirectoryAccess.findOneAndUpdate(
       { email: normalizedEmail },
       { status: 'revoked' },
@@ -196,7 +203,6 @@ export async function revokeAccess(req: AuthenticatedRequest, res: Response): Pr
     );
 
     // If user has an active account, deactivate it immediately
-    const userDoc = await User.findOne({ email: normalizedEmail });
     if (userDoc) {
       userDoc.status = 'inactive';
       await userDoc.save();

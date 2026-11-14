@@ -2,6 +2,7 @@ import request from 'supertest';
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { MongoMemoryServer } from 'mongodb-memory-server';
 import { createApp } from '../app.js';
 import { User } from '../models/User.js';
 import { WorkLog } from '../models/WorkLog.js';
@@ -10,8 +11,12 @@ import { Salary } from '../models/Salary.js';
 import { AuditLog } from '../models/AuditLog.js';
 import { config } from '../config/env.js';
 
+process.env.NODE_ENV = 'test';
+process.env.JWT_SECRET = 'test_jwt_secret_32_characters_minimum_secure_key!';
+
 describe('Phase 5 Security Suite: IDOR Protection, Strict RBAC & Audit Trails', () => {
   let app: ReturnType<typeof createApp>;
+  let mongoServer: MongoMemoryServer;
 
   let ceoUser: any;
   let attackerMember: any;
@@ -21,23 +26,14 @@ describe('Phase 5 Security Suite: IDOR Protection, Strict RBAC & Audit Trails', 
   let attackerToken: string;
 
   beforeAll(async () => {
-    if (mongoose.connection.readyState !== 1) {
-      if (mongoose.connection.readyState !== 0) {
-        await mongoose.disconnect();
-      }
-      await mongoose.connect(config.mongoUri);
-    }
+    mongoServer = await MongoMemoryServer.create();
+    await mongoose.connect(mongoServer.getUri());
     app = createApp();
   }, 30000);
 
   afterAll(async () => {
-    const ids = [ceoUser?._id, attackerMember?._id, victimMember?._id].filter(Boolean);
-    await User.deleteMany({ _id: { $in: ids } });
-    await WorkLog.deleteMany({ userId: { $in: ids } });
-    await Task.deleteMany({ assigneeId: { $in: ids } });
-    await Salary.deleteMany({ userId: { $in: ids } });
-    await AuditLog.deleteMany({ actorId: { $in: ids } });
     await mongoose.disconnect();
+    await mongoServer.stop();
   });
 
   beforeEach(async () => {
@@ -72,13 +68,13 @@ describe('Phase 5 Security Suite: IDOR Protection, Strict RBAC & Audit Trails', 
     });
 
     ceoToken = jwt.sign(
-      { userId: ceoUser._id.toString(), email: ceoUser.email, role: 'ceo', name: ceoUser.name },
+      { userId: ceoUser._id.toString(), email: ceoUser.email, role: 'ceo', name: ceoUser.name, purpose: 'session' },
       config.jwtSecret,
       { expiresIn: '1h' }
     );
 
     attackerToken = jwt.sign(
-      { userId: attackerMember._id.toString(), email: attackerMember.email, role: 'member', name: attackerMember.name },
+      { userId: attackerMember._id.toString(), email: attackerMember.email, role: 'member', name: attackerMember.name, purpose: 'session' },
       config.jwtSecret,
       { expiresIn: '1h' }
     );

@@ -145,6 +145,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
       <button
         onClick={() => setIsOpen(!isOpen)}
         title="Notifications"
+        aria-label="Notifications"
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -419,6 +420,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
                       <button
                         onClick={(e) => dismissNotification(item.id, e)}
                         title="Dismiss notification"
+                        aria-label="Dismiss notification"
                         style={{
                           color: 'var(--subtle)',
                           padding: '2px',

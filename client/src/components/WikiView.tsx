@@ -587,7 +587,11 @@ export const WikiView: React.FC = () => {
           zIndex: 1100,
           padding: '20px'
         }}>
-          <div style={{
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Article details"
+            style={{
             backgroundColor: 'var(--panel)',
             border: '1px solid var(--line)',
             borderRadius: 'var(--radius-lg)',
@@ -692,6 +696,7 @@ export const WikiView: React.FC = () => {
 
                 <button
                   onClick={() => setSelectedArticle(null)}
+                  aria-label="Close article modal"
                   style={{
                     padding: '6px',
                     borderRadius: 'var(--radius-sm)',
@@ -842,7 +847,11 @@ export const WikiView: React.FC = () => {
           zIndex: 1200,
           padding: '20px'
         }}>
-          <div style={{
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={editingArticle ? 'Edit wiki document' : 'Create executive wiki document'}
+            style={{
             backgroundColor: 'var(--panel)',
             border: '1px solid var(--line)',
             borderRadius: 'var(--radius-lg)',
@@ -868,7 +877,7 @@ export const WikiView: React.FC = () => {
                   {editingArticle ? 'Edit Wiki Document' : 'Publish Customer / Wiki Document'}
                 </h2>
               </div>
-              <button onClick={() => setIsModalOpen(false)} style={{ color: 'var(--muted)', cursor: 'pointer' }}>
+              <button onClick={() => setIsModalOpen(false)} aria-label="Close document editor" style={{ color: 'var(--muted)', cursor: 'pointer' }}>
                 <X size={18} />
               </button>
             </div>

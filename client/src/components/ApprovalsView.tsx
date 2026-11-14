@@ -350,7 +350,7 @@ export const ApprovalsView: React.FC = () => {
                       <h4 style={{ fontSize: '16.5px', fontWeight: 700, color: 'var(--text)' }}>
                         {work.title}
                       </h4>
-                      <span style={{ fontSize: '12px', color: 'var(--accent-teal)' }}>
+                      <span style={{ fontSize: '12px', color: 'var(--shiftpe-coral)' }}>
                         &bull; {work.userId?.name} ({work.userId?.designation})
                       </span>
                     </div>
@@ -363,7 +363,7 @@ export const ApprovalsView: React.FC = () => {
                       <span>{work.hours} hours logged</span>
                       <span>Date: {work.date}</span>
                       {work.link && (
-                        <a href={work.link} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--accent-teal)' }}>
+                        <a href={work.link} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--shiftpe-coral)' }}>
                           <ExternalLink size={12} />
                           Inspect Deliverable Link
                         </a>
@@ -474,7 +474,11 @@ export const ApprovalsView: React.FC = () => {
           zIndex: 1000,
           padding: '20px'
         }}>
-          <div style={{
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Reject work deliverable"
+            style={{
             width: '100%',
             maxWidth: '480px',
             backgroundColor: 'var(--panel)',
@@ -490,7 +494,11 @@ export const ApprovalsView: React.FC = () => {
               A written reason is required so the teammate understands what improvements or corrections are required before resubmitting.
             </p>
 
+            <label htmlFor="reject-reason" style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text)', marginBottom: '6px' }}>
+              Reason for Rejection
+            </label>
             <textarea
+              id="reject-reason"
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
               placeholder="e.g. Please update tests to cover edge cases and attach the deployed preview link."

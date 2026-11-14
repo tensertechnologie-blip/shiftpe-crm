@@ -335,7 +335,12 @@ export const SalaryView: React.FC = () => {
           zIndex: 1000,
           padding: '20px'
         }}>
-          <div style={{ width: '100%', maxWidth: '480px', backgroundColor: 'var(--panel)', border: '1px solid var(--line)', borderRadius: 'var(--radius-lg)', padding: '28px' }}>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Set monthly compensation"
+            style={{ width: '100%', maxWidth: '480px', backgroundColor: 'var(--panel)', border: '1px solid var(--line)', borderRadius: 'var(--radius-lg)', padding: '28px' }}
+          >
             <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '6px' }}>
               Set Monthly Compensation
             </h3>
@@ -345,8 +350,9 @@ export const SalaryView: React.FC = () => {
 
             <form onSubmit={handleSaveSalary}>
               <div style={{ marginBottom: '14px' }}>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Select Teammate</label>
+                <label htmlFor="salary-user-select" style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Select Teammate</label>
                 <select
+                  id="salary-user-select"
                   value={selectedUserId}
                   onChange={(e) => setSelectedUserId(e.target.value)}
                   required
@@ -361,10 +367,11 @@ export const SalaryView: React.FC = () => {
                 </select>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }} className="modal-grid-2">
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Month (YYYY-MM)</label>
+                  <label htmlFor="salary-month-input" style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Month (YYYY-MM)</label>
                   <input
+                    id="salary-month-input"
                     type="month"
                     value={month}
                     onChange={(e) => setMonth(e.target.value)}
@@ -374,8 +381,9 @@ export const SalaryView: React.FC = () => {
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Amount (INR)</label>
+                  <label htmlFor="salary-amount-input" style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Amount (INR)</label>
                   <input
+                    id="salary-amount-input"
                     type="number"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
@@ -387,8 +395,9 @@ export const SalaryView: React.FC = () => {
               </div>
 
               <div style={{ marginBottom: '14px' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer' }}>
+                <label htmlFor="salary-paid-check" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer' }}>
                   <input
+                    id="salary-paid-check"
                     type="checkbox"
                     checked={paid}
                     onChange={(e) => setPaid(e.target.checked)}
@@ -399,8 +408,9 @@ export const SalaryView: React.FC = () => {
               </div>
 
               <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Notes (Optional)</label>
+                <label htmlFor="salary-notes-input" style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Notes (Optional)</label>
                 <input
+                  id="salary-notes-input"
                   type="text"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}

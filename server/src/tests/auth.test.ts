@@ -1,13 +1,17 @@
 import request from 'supertest';
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
+import { MongoMemoryServer } from 'mongodb-memory-server';
 import { authenticator } from 'otplib';
 import { createApp } from '../app.js';
 import { User } from '../models/User.js';
-import { config } from '../config/env.js';
+
+process.env.NODE_ENV = 'test';
+process.env.JWT_SECRET = 'test_jwt_secret_32_characters_minimum_secure_key!';
 
 describe('Phase 1 Auth Suite: Core Authentication, TOTP, and Role-Based Access Control', () => {
   let app: ReturnType<typeof createApp>;
+  let mongoServer: MongoMemoryServer;
 
   const testCeo = {
     name: 'ShiftPe CEO Test',
@@ -24,20 +28,14 @@ describe('Phase 1 Auth Suite: Core Authentication, TOTP, and Role-Based Access C
   };
 
   beforeAll(async () => {
-    if (mongoose.connection.readyState !== 1) {
-      if (mongoose.connection.readyState !== 0) {
-        await mongoose.disconnect();
-      }
-      await mongoose.connect(config.mongoUri);
-    }
+    mongoServer = await MongoMemoryServer.create();
+    await mongoose.connect(mongoServer.getUri());
     app = createApp();
   }, 30000);
 
   afterAll(async () => {
-    // Clean up test accounts
-    await User.deleteMany({
-      email: { $in: [testCeo.email, testMember.email, 'teammate@shiftpe.com', 'new.engineer@shiftpe.com'] }
-    });
+    await mongoose.disconnect();
+    await mongoServer.stop();
   });
 
   beforeEach(async () => {

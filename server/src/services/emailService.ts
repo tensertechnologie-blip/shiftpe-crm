@@ -23,12 +23,22 @@ function getTransporter(): Transporter | null {
   return transporter;
 }
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 export async function sendTemporaryPasswordEmail(
   toEmail: string,
   userName: string,
   temporaryPassword: string
 ): Promise<{ success: boolean; preview?: string; error?: string }> {
   const mailTransporter = getTransporter();
+  const safeUserName = escapeHtml(userName);
 
   const htmlContent = `
 <!DOCTYPE html>
@@ -64,7 +74,7 @@ export async function sendTemporaryPasswordEmail(
     </div>
 
     <div class="body-content">
-      <p>Hello <strong>${userName}</strong>,</p>
+      <p>Hello <strong>${safeUserName}</strong>,</p>
       <p>Welcome to the official <strong>ShiftPe Team Portal</strong>. A teammate account has been initiated for your business email (<code>${toEmail}</code>).</p>
       
       <div class="pwd-box">
@@ -98,7 +108,7 @@ export async function sendTemporaryPasswordEmail(
         from: config.smtp.from,
         to: toEmail,
         subject: '🔐 Your ShiftPe Team Portal Access Password',
-        text: `Welcome to ShiftPe, ${userName}! Your temporary login password is: ${temporaryPassword}. Sign in at ${config.clientOrigin} and complete your teammate onboarding.`,
+        text: `Welcome to ShiftPe, ${userName}! Your temporary login password has been generated. Sign in at ${config.clientOrigin} and complete your teammate onboarding.`,
         html: htmlContent
       });
 
@@ -110,13 +120,7 @@ export async function sendTemporaryPasswordEmail(
     }
   } else {
     // Development fallback when SMTP_USER is not yet populated
-    console.log('\n======================================================');
-    console.log(`[EmailService Simulated Email Delivery (Development Mode)]`);
-    console.log(`To: ${toEmail}`);
-    console.log(`Subject: 🔐 Your ShiftPe Team Portal Access Password`);
-    console.log(`Temporary Password: ${temporaryPassword}`);
-    console.log(`Login URL: ${config.clientOrigin}`);
-    console.log('======================================================\n');
-    return { success: true, preview: temporaryPassword };
+    console.log('[EmailService Simulated Email Delivery (Development Mode)] Dispatched temporary access email to:', toEmail);
+    return { success: true };
   }
 }

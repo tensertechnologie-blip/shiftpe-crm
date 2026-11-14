@@ -34,7 +34,8 @@ export type NavTab =
   | 'Bulletin'
   | 'Approvals'
   | 'Wiki'
-  | 'CRM Access';
+  | 'CRM Access'
+  | 'Audit Log';
 
 export interface DirectoryEntry {
   _id: string;
@@ -89,12 +90,10 @@ export interface WikiArticleItem {
 }
 
 export interface LoginResponse {
-  status: 'totp_setup_required' | 'totp_required' | 'authenticated';
+  status: 'totp_setup_required' | 'totp_required';
   message: string;
-  tempToken?: string;
+  tempToken: string;
   qrCode?: string;
   manualSecret?: string;
-  email?: string;
-  token?: string;
-  user?: User;
+  email: string;
 }

@@ -4,6 +4,7 @@ import { WikiArticle, IWikiArticle } from '../models/WikiArticle.js';
 import { AuditLog } from '../models/AuditLog.js';
 import { AuthenticatedRequest } from '../middleware/auth.js';
 import { isExecutive } from '../middleware/roles.js';
+import { escapeRegex } from '../utils/escapeRegex.js';
 
 const customerDetailsSchema = z.object({
   companyName: z.string().min(1, 'Company name is required'),
@@ -226,17 +227,18 @@ export async function getArticles(req: AuthenticatedRequest, res: Response): Pro
 
     // Optional category filter
     if (req.query.category && req.query.category !== 'All') {
-      query.category = req.query.category;
+      query.category = String(req.query.category);
     }
 
     // Optional customer tier filter
     if (req.query.tier && req.query.tier !== 'All') {
-      query['customerDetails.tier'] = req.query.tier;
+      query['customerDetails.tier'] = String(req.query.tier);
     }
 
     // Optional search keyword
     if (req.query.q) {
-      const regex = new RegExp(String(req.query.q).trim(), 'i');
+      const searchStr = escapeRegex(String(req.query.q).trim().slice(0, 50));
+      const regex = new RegExp(searchStr, 'i');
       query.$or = [
         { title: regex },
         { summary: regex },

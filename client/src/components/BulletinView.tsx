@@ -713,7 +713,11 @@ export const BulletinView: React.FC = () => {
           zIndex: 1000,
           padding: '20px'
         }}>
-          <div style={{
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Broadcast executive announcement"
+            style={{
             width: '100%',
             maxWidth: '520px',
             backgroundColor: 'var(--panel)',
@@ -745,10 +749,11 @@ export const BulletinView: React.FC = () => {
 
             <form onSubmit={handleCreateAnnouncement}>
               <div style={{ marginBottom: '14px' }}>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text)', marginBottom: '6px' }}>
+                <label htmlFor="announcement-title" style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text)', marginBottom: '6px' }}>
                   Announcement Title
                 </label>
                 <input
+                  id="announcement-title"
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
@@ -766,12 +771,13 @@ export const BulletinView: React.FC = () => {
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }} className="modal-grid-2">
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text)', marginBottom: '6px' }}>
+                  <label htmlFor="announcement-category" style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text)', marginBottom: '6px' }}>
                     Category
                   </label>
                   <select
+                    id="announcement-category"
                     value={category}
                     onChange={(e: any) => setCategory(e.target.value)}
                     style={{
@@ -793,8 +799,9 @@ export const BulletinView: React.FC = () => {
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', paddingTop: '24px' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '12.5px', color: 'var(--text)', fontWeight: 600 }}>
+                  <label htmlFor="announcement-pin" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '12.5px', color: 'var(--text)', fontWeight: 600 }}>
                     <input
+                      id="announcement-pin"
                       type="checkbox"
                       checked={pinned}
                       onChange={(e) => setPinned(e.target.checked)}
@@ -806,10 +813,11 @@ export const BulletinView: React.FC = () => {
               </div>
 
               <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text)', marginBottom: '6px' }}>
+                <label htmlFor="announcement-content" style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text)', marginBottom: '6px' }}>
                   Notice Content
                 </label>
                 <textarea
+                  id="announcement-content"
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   rows={4}

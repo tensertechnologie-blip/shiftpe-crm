@@ -2,7 +2,8 @@ import { Router, Response } from 'express';
 import {
   login,
   verifyTotp,
-  resetTotp,
+  resetTotpForUser,
+  unlockUser,
   inviteUser,
   getMe,
   logout,
@@ -19,7 +20,8 @@ const router = Router();
 router.post('/register', loginLimiter, registerTeammate);
 router.post('/login', loginLimiter, login);
 router.post('/totp-verify', loginLimiter, verifyTotp);
-router.post('/reset-totp', loginLimiter, resetTotp);
+router.post('/users/:id/reset-totp', requireAuth, requireCEO, resetTotpForUser);
+router.post('/users/:id/unlock', requireAuth, requireCEO, unlockUser);
 router.post('/onboarding', requireAuth, completeOnboarding);
 router.post('/onboarding/skip', requireAuth, skipOnboarding);
 router.post('/invite', requireAuth, requireCEO, inviteUser);

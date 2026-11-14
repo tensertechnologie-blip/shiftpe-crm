@@ -112,7 +112,7 @@ export const ContributionGraphView: React.FC = () => {
         <div style={{ padding: '20px', backgroundColor: 'var(--panel)', border: '1px solid var(--line)', borderRadius: 'var(--radius-md)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
             <span style={{ fontSize: '12px', textTransform: 'uppercase', color: 'var(--subtle)', fontWeight: 700 }}>Verified Hours Logged</span>
-            <Clock size={18} color="var(--accent-teal)" />
+            <Clock size={18} color="var(--shiftpe-coral)" />
           </div>
           <div style={{ fontSize: '28px', fontWeight: 800, color: 'var(--text)' }}>
             {totalHours} <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--muted)' }}>hours</span>

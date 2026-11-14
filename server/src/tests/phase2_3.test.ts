@@ -2,14 +2,19 @@ import request from 'supertest';
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { MongoMemoryServer } from 'mongodb-memory-server';
 import { createApp } from '../app.js';
 import { User } from '../models/User.js';
 import { Attendance } from '../models/Attendance.js';
 import { WorkLog } from '../models/WorkLog.js';
 import { config } from '../config/env.js';
 
+process.env.NODE_ENV = 'test';
+process.env.JWT_SECRET = 'test_jwt_secret_32_characters_minimum_secure_key!';
+
 describe('Phase 2 & Phase 3 Test Suite: People Hierarchy, Org Tree, Attendance & Work Approvals', () => {
   let app: ReturnType<typeof createApp>;
+  let mongoServer: MongoMemoryServer;
 
   let ceoUser: any;
   let managerUser: any;
@@ -19,21 +24,14 @@ describe('Phase 2 & Phase 3 Test Suite: People Hierarchy, Org Tree, Attendance &
   let memberToken: string;
 
   beforeAll(async () => {
-    if (mongoose.connection.readyState !== 1) {
-      if (mongoose.connection.readyState !== 0) {
-        await mongoose.disconnect();
-      }
-      await mongoose.connect(config.mongoUri);
-    }
+    mongoServer = await MongoMemoryServer.create();
+    await mongoose.connect(mongoServer.getUri());
     app = createApp();
   }, 30000);
 
   afterAll(async () => {
-    await User.deleteMany({
-      email: { $in: ['test_ceo2@shiftpe.com', 'test_manager2@shiftpe.com', 'test_member2@shiftpe.com'] }
-    });
-    if (ceoUser) await Attendance.deleteMany({ userId: { $in: [ceoUser._id, memberUser._id] } });
-    if (ceoUser) await WorkLog.deleteMany({ userId: { $in: [ceoUser._id, memberUser._id] } });
+    await mongoose.disconnect();
+    await mongoServer.stop();
   });
 
   beforeEach(async () => {
@@ -82,13 +80,13 @@ describe('Phase 2 & Phase 3 Test Suite: People Hierarchy, Org Tree, Attendance &
     });
 
     ceoToken = jwt.sign(
-      { userId: ceoUser._id.toString(), email: ceoUser.email, role: 'ceo', name: ceoUser.name },
+      { userId: ceoUser._id.toString(), email: ceoUser.email, role: 'ceo', name: ceoUser.name, purpose: 'session' },
       config.jwtSecret,
       { expiresIn: '1h' }
     );
 
     memberToken = jwt.sign(
-      { userId: memberUser._id.toString(), email: memberUser.email, role: 'member', name: memberUser.name },
+      { userId: memberUser._id.toString(), email: memberUser.email, role: 'member', name: memberUser.name, purpose: 'session' },
       config.jwtSecret,
       { expiresIn: '1h' }
     );

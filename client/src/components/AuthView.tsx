@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { ShiftPeLogo } from './ShiftPeLogo';
-import { Shield, KeyRound, QrCode, ArrowRight, Copy, Check, AlertCircle, Lock, Sun, Moon, Mail, Send, ShieldAlert, Zap } from 'lucide-react';
+import { Shield, KeyRound, QrCode, ArrowRight, Copy, Check, AlertCircle, Lock, Sun, Moon, Mail, Send } from 'lucide-react';
 
 export const AuthView: React.FC = () => {
   const { loginWithPassword, verifyTotp } = useAuth();
@@ -19,7 +19,6 @@ export const AuthView: React.FC = () => {
   const [registerEmail, setRegisterEmail] = useState('');
   const [registerName, setRegisterName] = useState('');
   const [registrationSuccessMsg, setRegistrationSuccessMsg] = useState('');
-  const [devPasswordPreview, setDevPasswordPreview] = useState<string | undefined>();
 
   const [errorMessage, setErrorMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -32,8 +31,8 @@ export const AuthView: React.FC = () => {
   const [totpCode, setTotpCode] = useState('');
   const [copiedSecret, setCopiedSecret] = useState(false);
 
-  const handlePasswordSubmit = async (e?: React.FormEvent, bypassTotp: boolean = false) => {
-    if (e) e.preventDefault();
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setErrorMessage('');
 
     if (!/@shiftpe\.(com|in)$/i.test(email.trim())) {
@@ -48,11 +47,8 @@ export const AuthView: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      const response = await loginWithPassword(email.trim(), password, bypassTotp);
-      if (response.status === 'authenticated') {
-        return;
-      }
-      setTempToken(response.tempToken || '');
+      const response = await loginWithPassword(email.trim(), password);
+      setTempToken(response.tempToken);
 
       if (response.status === 'totp_setup_required') {
         setQrCodeData(response.qrCode);
@@ -91,7 +87,6 @@ export const AuthView: React.FC = () => {
     e.preventDefault();
     setErrorMessage('');
     setRegistrationSuccessMsg('');
-    setDevPasswordPreview(undefined);
 
     const cleanEmail = registerEmail.trim().toLowerCase();
     if (!/@shiftpe\.(com|in)$/i.test(cleanEmail)) {
@@ -116,9 +111,6 @@ export const AuthView: React.FC = () => {
       }
 
       setRegistrationSuccessMsg(data.message);
-      if (data.devPassword) {
-        setDevPasswordPreview(data.devPassword);
-      }
     } catch (err: any) {
       setErrorMessage(err.message || 'Registration failed');
     } finally {
@@ -185,7 +177,7 @@ export const AuthView: React.FC = () => {
         width: '450px',
         height: '450px',
         borderRadius: '50%',
-        background: 'radial-gradient(circle, var(--shiftpe-teal-glow) 0%, transparent 70%)',
+        background: 'radial-gradient(circle, var(--shiftpe-coral-glow) 0%, transparent 70%)',
         pointerEvents: 'none'
       }} />
 
@@ -196,7 +188,7 @@ export const AuthView: React.FC = () => {
         width: '400px',
         height: '400px',
         borderRadius: '50%',
-        background: 'radial-gradient(circle, var(--shiftpe-teal-glow) 0%, transparent 70%)',
+        background: 'radial-gradient(circle, var(--shiftpe-coral-glow) 0%, transparent 70%)',
         pointerEvents: 'none'
       }} />
 
@@ -222,7 +214,7 @@ export const AuthView: React.FC = () => {
           zIndex: 20
         }}
       >
-        {theme === 'dark' ? <Sun size={14} color="var(--shiftpe-teal)" /> : <Moon size={14} color="var(--accent-amber)" />}
+        {theme === 'dark' ? <Sun size={14} color="var(--shiftpe-coral)" /> : <Moon size={14} color="var(--accent-amber)" />}
         <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
       </button>
 
@@ -352,42 +344,6 @@ export const AuthView: React.FC = () => {
                 <p style={{ fontSize: '13px', color: 'var(--muted)', lineHeight: 1.5, marginBottom: '18px' }}>
                   We have sent your initial access credentials to <strong>{registerEmail}</strong>. Please check your business email inbox.
                 </p>
-
-                {devPasswordPreview && (
-                  <div style={{
-                    backgroundColor: 'var(--bg)',
-                    border: '1px dashed var(--shiftpe-coral)',
-                    borderRadius: 'var(--radius-sm)',
-                    padding: '12px',
-                    marginBottom: '16px',
-                    textAlign: 'left'
-                  }}>
-                    <div style={{ fontSize: '10.5px', textTransform: 'uppercase', color: 'var(--shiftpe-coral)', fontWeight: 700, letterSpacing: '0.6px', marginBottom: '4px' }}>
-                      ⚡ Dev Fast-Fill Mode (Temporary Password):
-                    </div>
-                    <code style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-mono)' }}>
-                      {devPasswordPreview}
-                    </code>
-                    <button
-                      type="button"
-                      onClick={() => proceedToSignInWithCreds(registerEmail, devPasswordPreview)}
-                      style={{
-                        width: '100%',
-                        marginTop: '10px',
-                        padding: '8px',
-                        backgroundColor: 'var(--shiftpe-coral-light)',
-                        border: '1px solid var(--shiftpe-coral-border)',
-                        borderRadius: 'var(--radius-sm)',
-                        color: 'var(--shiftpe-coral)',
-                        fontWeight: 700,
-                        fontSize: '12px',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Autofill & Proceed to Sign In &rarr;
-                    </button>
-                  </div>
-                )}
 
                 <button
                   type="button"
@@ -604,8 +560,8 @@ export const AuthView: React.FC = () => {
               style={{
                 width: '100%',
                 padding: '12px',
-                backgroundColor: 'var(--shiftpe-teal)',
-                color: 'var(--button-text-on-teal)',
+                backgroundColor: 'var(--shiftpe-coral)',
+                color: 'var(--button-text-on-coral)',
                 fontWeight: 700,
                 fontSize: '13.5px',
                 borderRadius: 'var(--radius-sm)',
@@ -614,7 +570,7 @@ export const AuthView: React.FC = () => {
                 justifyContent: 'center',
                 gap: '8px',
                 transition: 'var(--transition)',
-                boxShadow: '0 4px 14px var(--shiftpe-teal-glow)'
+                boxShadow: '0 4px 14px var(--shiftpe-coral-glow)'
               }}
             >
               {isSubmitting ? (
@@ -625,31 +581,6 @@ export const AuthView: React.FC = () => {
                   <ArrowRight size={16} />
                 </>
               )}
-            </button>
-
-            <button
-              type="button"
-              disabled={isSubmitting}
-              onClick={() => handlePasswordSubmit(undefined, true)}
-              style={{
-                width: '100%',
-                marginTop: '10px',
-                padding: '10px',
-                backgroundColor: 'transparent',
-                border: '1px solid var(--line)',
-                color: 'var(--text)',
-                fontWeight: 600,
-                fontSize: '12.5px',
-                borderRadius: 'var(--radius-sm)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px',
-                cursor: 'pointer'
-              }}
-            >
-              <Zap size={14} color="var(--shiftpe-coral)" />
-              <span>Direct Sign In (Password Only / Skip 2FA)</span>
             </button>
 
             <div style={{ marginTop: '14px', textAlign: 'center' }}>
@@ -850,43 +781,6 @@ export const AuthView: React.FC = () => {
               <Shield size={16} />
               <span>Verify & Activate Session</span>
             </button>
-
-            {/* Emergency Bypass for Setup Step */}
-            <div style={{ marginTop: '14px', textAlign: 'center' }}>
-              <button
-                type="button"
-                onClick={async () => {
-                  setTotpCode('888999');
-                  setIsSubmitting(true);
-                  try {
-                    await verifyTotp(tempToken, '888999');
-                  } catch (err: any) {
-                    setErrorMessage(err.message || 'Emergency verification failed');
-                  } finally {
-                    setIsSubmitting(false);
-                  }
-                }}
-                disabled={isSubmitting}
-                style={{
-                  width: '100%',
-                  padding: '9px',
-                  backgroundColor: 'transparent',
-                  border: '1px dashed var(--shiftpe-coral)',
-                  color: 'var(--shiftpe-coral)',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  borderRadius: 'var(--radius-sm)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px'
-                }}
-              >
-                <Zap size={13} />
-                <span>No Authenticator App? Use Emergency Bypass (888999)</span>
-              </button>
-            </div>
           </form>
         )}
 
@@ -964,58 +858,6 @@ export const AuthView: React.FC = () => {
               <Lock size={16} />
               <span>Verify & Sign In</span>
             </button>
-
-            {/* Authenticator App Missing / Uninstalled Helper */}
-            <div style={{
-              marginTop: '18px',
-              padding: '14px',
-              backgroundColor: 'rgba(255, 95, 85, 0.08)',
-              border: '1px dashed var(--shiftpe-coral)',
-              borderRadius: 'var(--radius-md)',
-              textAlign: 'center'
-            }}>
-              <div style={{ fontSize: '12.5px', color: 'var(--text)', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                <ShieldAlert size={15} color="var(--shiftpe-coral)" />
-                <strong>Google Authenticator app uninstalled or lost?</strong>
-              </div>
-              <p style={{ fontSize: '11.5px', color: 'var(--muted)', marginBottom: '10px', lineHeight: 1.4 }}>
-                You can enter emergency passcode <code style={{ color: 'var(--shiftpe-coral)', fontWeight: 700 }}>888999</code> or click below to bypass directly:
-              </p>
-              <button
-                type="button"
-                onClick={async () => {
-                  setTotpCode('888999');
-                  setIsSubmitting(true);
-                  try {
-                    await verifyTotp(tempToken, '888999');
-                  } catch (err: any) {
-                    setErrorMessage(err.message || 'Emergency verification failed');
-                  } finally {
-                    setIsSubmitting(false);
-                  }
-                }}
-                disabled={isSubmitting}
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  backgroundColor: 'var(--shiftpe-coral)',
-                  color: '#ffffff',
-                  fontSize: '12.5px',
-                  fontWeight: 700,
-                  borderRadius: 'var(--radius-sm)',
-                  cursor: 'pointer',
-                  border: 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px',
-                  boxShadow: '0 2px 8px var(--shiftpe-coral-glow)'
-                }}
-              >
-                <Zap size={14} />
-                <span>One-Click Emergency Bypass (888999) & Sign In</span>
-              </button>
-            </div>
 
             <button
               type="button"

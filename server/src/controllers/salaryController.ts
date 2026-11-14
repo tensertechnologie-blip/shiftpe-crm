@@ -26,6 +26,17 @@ export async function upsertSalary(req: AuthenticatedRequest, res: Response): Pr
       return;
     }
 
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      res.status(400).json({ error: 'Invalid userId: must be a valid MongoDB ObjectId' });
+      return;
+    }
+
+    const monthRegex = /^\d{4}-(0[1-9]|1[0-2])$/;
+    if (typeof month !== 'string' || !monthRegex.test(month)) {
+      res.status(400).json({ error: 'Invalid month: must match format YYYY-MM' });
+      return;
+    }
+
     const parsedAmount = Number(amount);
     if (isNaN(parsedAmount) || parsedAmount < 0) {
       res.status(400).json({ error: 'Amount must be a non-negative number' });

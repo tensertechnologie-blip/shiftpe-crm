@@ -24,12 +24,7 @@ export const requireCEO = requireRole('ceo');
 export const requireApprover = requireRole('ceo', 'manager');
 
 export function isExecutive(user?: { role?: string; email?: string } | null): boolean {
-  if (!user) return false;
-  if (user.role === 'ceo') return true;
-  if (user.email && (user.email.includes('.founder@shiftpe.in') || user.email === 'founders@shiftpe.in')) {
-    return true;
-  }
-  return false;
+  return user?.role === 'ceo';
 }
 
 export function requireExecutive(req: AuthenticatedRequest, res: Response, next: NextFunction): void {

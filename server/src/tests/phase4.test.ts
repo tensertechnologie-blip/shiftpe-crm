@@ -2,6 +2,7 @@ import request from 'supertest';
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { MongoMemoryServer } from 'mongodb-memory-server';
 import { createApp } from '../app.js';
 import { User } from '../models/User.js';
 import { WorkLog } from '../models/WorkLog.js';
@@ -9,8 +10,12 @@ import { Task } from '../models/Task.js';
 import { Salary } from '../models/Salary.js';
 import { config } from '../config/env.js';
 
+process.env.NODE_ENV = 'test';
+process.env.JWT_SECRET = 'test_jwt_secret_32_characters_minimum_secure_key!';
+
 describe('Phase 4 Test Suite: Contribution Graph, Tasks, and Confidential Salary', () => {
   let app: ReturnType<typeof createApp>;
+  let mongoServer: MongoMemoryServer;
 
   let ceoUser: any;
   let memberA: any;
@@ -21,22 +26,14 @@ describe('Phase 4 Test Suite: Contribution Graph, Tasks, and Confidential Salary
   let memberBToken: string;
 
   beforeAll(async () => {
-    if (mongoose.connection.readyState !== 1) {
-      if (mongoose.connection.readyState !== 0) {
-        await mongoose.disconnect();
-      }
-      await mongoose.connect(config.mongoUri);
-    }
+    mongoServer = await MongoMemoryServer.create();
+    await mongoose.connect(mongoServer.getUri());
     app = createApp();
   }, 30000);
 
   afterAll(async () => {
-    const ids = [ceoUser?._id, memberA?._id, memberB?._id].filter(Boolean);
-    await User.deleteMany({ _id: { $in: ids } });
-    await WorkLog.deleteMany({ userId: { $in: ids } });
-    await Task.deleteMany({ assigneeId: { $in: ids } });
-    await Salary.deleteMany({ userId: { $in: ids } });
     await mongoose.disconnect();
+    await mongoServer.stop();
   });
 
   beforeEach(async () => {
@@ -78,19 +75,19 @@ describe('Phase 4 Test Suite: Contribution Graph, Tasks, and Confidential Salary
     });
 
     ceoToken = jwt.sign(
-      { userId: ceoUser._id.toString(), email: ceoUser.email, role: 'ceo', name: ceoUser.name },
+      { userId: ceoUser._id.toString(), email: ceoUser.email, role: 'ceo', name: ceoUser.name, purpose: 'session' },
       config.jwtSecret,
       { expiresIn: '1h' }
     );
 
     memberAToken = jwt.sign(
-      { userId: memberA._id.toString(), email: memberA.email, role: 'member', name: memberA.name },
+      { userId: memberA._id.toString(), email: memberA.email, role: 'member', name: memberA.name, purpose: 'session' },
       config.jwtSecret,
       { expiresIn: '1h' }
     );
 
     memberBToken = jwt.sign(
-      { userId: memberB._id.toString(), email: memberB.email, role: 'member', name: memberB.name },
+      { userId: memberB._id.toString(), email: memberB.email, role: 'member', name: memberB.name, purpose: 'session' },
       config.jwtSecret,
       { expiresIn: '1h' }
     );

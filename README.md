@@ -80,12 +80,12 @@ git push -u origin main
 5. Under **Environment Variables**, add:
    ```env
    NODE_ENV=production
-   MONGODB_URI=mongodb+srv://tensertechnologie_db_user:dCSaOlUUOKulokYv@cluster0.hipta7v.mongodb.net/shiftpe_crm?retryWrites=true&w=majority
-   JWT_SECRET=shiftpe_super_secret_jwt_key_2026_dev_prod_auth_token_9999
+   MONGODB_URI=mongodb+srv://CHANGE_ME_USER:CHANGE_ME_PASSWORD@cluster0.example.mongodb.net/shiftpe_crm?retryWrites=true&w=majority
+   JWT_SECRET=CHANGE_ME_AT_LEAST_32_CHARACTERS_LONG_SECRET_KEY
    CLIENT_ORIGIN=https://<your-project-name>.vercel.app
-   CEO_EMAIL=ajay.founder@shiftpe.in
-   CEO_PASSWORD=ShiftPeCeo2026!
-   CEO_NAME=Ajay (Founder & CEO)
+   CEO_EMAIL=ceo@shiftpe.com
+   CEO_PASSWORD=CHANGE_ME_SECURE_PASSWORD
+   CEO_NAME=ShiftPe Founder
    CEO_PHONE=+91 9876543210
    ```
 6. In **MongoDB Atlas** &rarr; **Security** &rarr; **Network Access**:

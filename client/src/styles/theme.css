@@ -23,14 +23,6 @@
   --shiftpe-coral-border: rgba(255, 95, 85, 0.35);
   --button-text-on-coral: #ffffff;
 
-  /* Aliased for legacy references */
-  --shiftpe-teal: #ff5f55;
-  --shiftpe-teal-hover: #f04e43;
-  --shiftpe-teal-glow: rgba(255, 95, 85, 0.24);
-  --shiftpe-teal-light: rgba(255, 95, 85, 0.12);
-  --shiftpe-teal-border: rgba(255, 95, 85, 0.35);
-  --button-text-on-teal: #ffffff;
-
   /* Accent & Functional Highlights */
   --accent-green: #10b981;
   --accent-green-glow: rgba(16, 185, 129, 0.16);
@@ -46,7 +38,6 @@
 
   /* Dot Accents for Tiles */
   --dot-green: #10b981;
-  --dot-teal: #ff5f55;
   --dot-coral: #ff5f55;
   --dot-purple: #8b5cf6;
   --dot-blue: #3b82f6;
@@ -89,14 +80,6 @@
   --shiftpe-coral-border: rgba(255, 95, 85, 0.3);
   --button-text-on-coral: #ffffff;
 
-  /* Aliased for legacy references */
-  --shiftpe-teal: #ff5f55;
-  --shiftpe-teal-hover: #f04e43;
-  --shiftpe-teal-glow: rgba(255, 95, 85, 0.2);
-  --shiftpe-teal-light: rgba(255, 95, 85, 0.1);
-  --shiftpe-teal-border: rgba(255, 95, 85, 0.3);
-  --button-text-on-teal: #ffffff;
-
   --accent-green: #059669;
   --accent-green-glow: rgba(5, 150, 105, 0.14);
   --accent-purple: #7c3aed;
@@ -109,7 +92,6 @@
   --status-rejected: #ff5f55;
 
   --dot-green: #059669;
-  --dot-teal: #ff5f55;
   --dot-coral: #ff5f55;
   --dot-purple: #7c3aed;
   --dot-blue: #2563eb;
@@ -132,6 +114,12 @@ body {
   line-height: 1.45;
   overflow-x: hidden;
   transition: background-color 0.25s ease, color 0.2s ease;
+}
+
+/* Accessibility: Visible Focus Outlines */
+:focus-visible {
+  outline: 2px solid var(--shiftpe-coral) !important;
+  outline-offset: 2px !important;
 }
 
 button {
@@ -176,4 +164,128 @@ a {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--line-strong);
+}
+
+/* Responsive Table Containers */
+.table-scroll,
+.table-container,
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Top Navbar The Dot Style */
+.desktop-category-nav {
+  display: flex;
+}
+.mobile-hamburger-btn {
+  display: none;
+}
+.dot-datetime {
+  display: block;
+}
+.dot-btn-label {
+  display: inline;
+}
+
+@media (max-width: 960px) {
+  .dot-datetime {
+    display: none !important;
+  }
+}
+
+/* Responsive Media Rules */
+@media (max-width: 768px) {
+  .desktop-category-nav {
+    display: none !important;
+  }
+  .mobile-hamburger-btn {
+    display: flex !important;
+  }
+  .dot-search-container {
+    width: 130px !important;
+  }
+  .dot-btn-label {
+    display: none !important;
+  }
+
+  /* Sidebar Drawer Collapse */
+  .sidebar-nav {
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    height: 100vh !important;
+    transform: translateX(-100%);
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.6) !important;
+  }
+  .sidebar-nav.mobile-open {
+    transform: translateX(0) !important;
+  }
+
+  .mobile-header {
+    display: flex !important;
+  }
+
+  .mobile-hamburger-btn {
+    display: flex !important;
+  }
+
+  .mobile-logo-wrap {
+    display: flex !important;
+  }
+
+  .status-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Stack two-column grids inside modals */
+  [role="dialog"] [style*="grid-template-columns: repeat(2"],
+  [role="dialog"] [style*="gridTemplateColumns: repeat(2"],
+  [role="dialog"] [style*="grid-template-columns: 1fr 1fr"],
+  [role="dialog"] [style*="gridTemplateColumns: 1fr 1fr"],
+  [role="dialog"] .modal-grid-2,
+  [role="dialog"] .two-col-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Horizontally scrollable tables on small screens */
+  table {
+    min-width: 600px;
+  }
+
+  .table-scroll,
+  .table-container,
+  .table-responsive,
+  div:has(> table) {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Modal container padding adjustments */
+  [role="dialog"] {
+    max-width: 95vw !important;
+    margin: 12px !important;
+    padding: 16px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Ultra-compact screens */
+  [role="dialog"] {
+    max-width: 98vw !important;
+    margin: 8px !important;
+    padding: 14px !important;
+  }
+
+  table {
+    min-width: 520px;
+  }
+
+  /* Form actions stack vertically */
+  [role="dialog"] form > div[style*="display: flex"][style*="justify-content: flex-end"],
+  [role="dialog"] form > div[style*="display: flex"][style*="justifyContent: flex-end"] {
+    flex-direction: column-reverse !important;
+    gap: 8px !important;
+  }
 }

@@ -76,7 +76,7 @@ export const OrgTreeView: React.FC = () => {
             width: '36px',
             height: '36px',
             borderRadius: '50%',
-            backgroundColor: node.role === 'ceo' ? 'var(--accent-purple)' : node.role === 'manager' ? 'var(--accent-teal)' : 'var(--accent-blue)',
+            backgroundColor: node.role === 'ceo' ? 'var(--accent-purple)' : node.role === 'manager' ? 'var(--shiftpe-coral)' : 'var(--accent-blue)',
             color: '#fff',
             fontWeight: 700,
             display: 'flex',
@@ -95,7 +95,7 @@ export const OrgTreeView: React.FC = () => {
               {node.role === 'ceo' && <Shield size={14} color="var(--accent-green)" />}
             </div>
             <div style={{ fontSize: '12px', color: 'var(--muted)' }}>
-              {node.designation} &bull; <span style={{ color: 'var(--accent-teal)' }}>{node.domain}</span>
+              {node.designation} &bull; <span style={{ color: 'var(--shiftpe-coral)' }}>{node.domain}</span>
             </div>
           </div>
         </div>

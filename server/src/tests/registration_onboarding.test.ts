@@ -1,51 +1,57 @@
 import request from 'supertest';
 import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
+import { MongoMemoryServer } from 'mongodb-memory-server';
 import { authenticator } from 'otplib';
 import { createApp } from '../app.js';
 import { User } from '../models/User.js';
 import { Task } from '../models/Task.js';
-import { config } from '../config/env.js';
+
+process.env.NODE_ENV = 'test';
+process.env.JWT_SECRET = 'test_jwt_secret_32_characters_minimum_secure_key!';
 
 describe('Teammate Registration, Directory Whitelist & Onboarding Suite', () => {
   let app: ReturnType<typeof createApp>;
+  let mongoServer: MongoMemoryServer;
   const whitelistedEmail = 'ritesh.founder@shiftpe.in';
   const unauthorizedEmail = 'dummy.user@shiftpe.in';
 
   beforeAll(async () => {
-    if (mongoose.connection.readyState !== 1) {
-      if (mongoose.connection.readyState !== 0) {
-        await mongoose.disconnect();
-      }
-      await mongoose.connect(config.mongoUri);
-    }
+    mongoServer = await MongoMemoryServer.create();
+    await mongoose.connect(mongoServer.getUri());
     app = createApp();
   }, 30000);
 
   afterAll(async () => {
-    await User.deleteMany({ email: { $in: [whitelistedEmail, unauthorizedEmail] } });
+    await mongoose.disconnect();
+    await mongoServer.stop();
   });
 
   beforeEach(async () => {
     await User.deleteMany({ email: { $in: [whitelistedEmail, unauthorizedEmail] } });
   });
 
-  it('1. should REJECT registration with an email not in the directory whitelist', async () => {
+  it('1. should return generic response when email is not in the directory whitelist and not create a user', async () => {
     const res = await request(app)
       .post('/api/auth/register')
       .send({ email: unauthorizedEmail, name: 'Dummy User' });
 
-    expect(res.status).toBe(403);
-    expect(res.body.error).toMatch(/whitelist/i);
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.message).toBe('If this email is authorized, access instructions have been sent to it.');
+    const user = await User.findOne({ email: unauthorizedEmail });
+    expect(user).toBeNull();
   });
 
-  it('2. should ACCEPT registration with a whitelisted business email and generate temporary password', async () => {
+  it('2. should ACCEPT registration with a whitelisted business email and not leak password in response', async () => {
     const res = await request(app)
       .post('/api/auth/register')
       .send({ email: whitelistedEmail, name: 'Ritesh Founder' });
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(res.body.devPassword).toBeDefined();
+    expect(res.body.message).toBe('If this email is authorized, access instructions have been sent to it.');
+    expect(res.body.devPassword).toBeUndefined();
 
     const createdUser = await User.findOne({ email: whitelistedEmail });
     expect(createdUser).not.toBeNull();
@@ -60,13 +66,20 @@ describe('Teammate Registration, Directory Whitelist & Onboarding Suite', () => 
       .send({ email: whitelistedEmail, name: 'Ritesh' });
 
     expect(regRes.status).toBe(200);
-    const tempPassword = regRes.body.devPassword;
-    expect(tempPassword).toBeDefined();
+    expect(regRes.body.success).toBe(true);
+    expect(regRes.body.devPassword).toBeUndefined();
+
+    // Set known temporary password for testing login flow
+    const testTempPassword = 'KnownTempPassword123!';
+    const userDocBefore = await User.findOne({ email: whitelistedEmail });
+    expect(userDocBefore).not.toBeNull();
+    userDocBefore!.passwordHash = await bcrypt.hash(testTempPassword, 10);
+    await userDocBefore!.save();
 
     // Step B: Login with temporary password
     const loginRes = await request(app)
       .post('/api/auth/login')
-      .send({ email: whitelistedEmail, password: tempPassword });
+      .send({ email: whitelistedEmail, password: testTempPassword });
 
     expect(loginRes.status).toBe(200);
     expect(loginRes.body.status).toBe('totp_setup_required');

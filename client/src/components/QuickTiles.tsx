@@ -24,7 +24,7 @@ export const QuickTiles: React.FC<QuickTilesProps> = ({ onSelectTab }) => {
     {
       title: 'Daily Attendance',
       description: 'Log check-in / check-out with verified server time.',
-      dotColor: 'var(--dot-teal)',
+      dotColor: 'var(--dot-coral)',
       tab: 'Attendance' as NavTab,
       icon: Clock
     },
@@ -105,7 +105,7 @@ export const QuickTiles: React.FC<QuickTilesProps> = ({ onSelectTab }) => {
                 boxShadow: 'var(--card-shadow)'
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = 'var(--shiftpe-teal-border)';
+                e.currentTarget.style.borderColor = 'var(--shiftpe-coral-border)';
                 e.currentTarget.style.backgroundColor = 'var(--panel-hover)';
                 e.currentTarget.style.transform = 'translateY(-2px)';
               }}
@@ -142,7 +142,7 @@ export const QuickTiles: React.FC<QuickTilesProps> = ({ onSelectTab }) => {
                 gap: '4px',
                 fontSize: '11px',
                 fontWeight: 600,
-                color: 'var(--shiftpe-teal)'
+                color: 'var(--shiftpe-coral)'
               }}>
                 <span>Open {tile.tab}</span>
                 <ChevronRight size={12} />

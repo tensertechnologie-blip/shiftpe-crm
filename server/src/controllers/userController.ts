@@ -1,8 +1,22 @@
 import { Response } from 'express';
 import mongoose from 'mongoose';
+import { z } from 'zod';
 import { User, IUser } from '../models/User.js';
 import { Domain } from '../models/Domain.js';
 import { AuthenticatedRequest } from '../middleware/auth.js';
+import { escapeRegex } from '../utils/escapeRegex.js';
+import { logAuditEvent } from '../utils/audit.js';
+
+const updateUserSchema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters').max(60, 'Name must be at most 60 characters').optional(),
+  phone: z.string().max(20, 'Phone must be at most 20 characters').optional(),
+  skills: z.array(z.string()).max(30, 'Skills must contain at most 30 items').optional(),
+  designation: z.string().optional(),
+  domain: z.string().optional(),
+  reportsTo: z.string().nullable().optional(),
+  status: z.enum(['active', 'inactive']).optional(),
+  role: z.enum(['member', 'manager', 'ceo']).optional()
+});
 
 // Helper: Detect circular reporting chain
 export async function wouldCreateReportingCycle(userId: string, targetManagerId: string): Promise<boolean> {
@@ -44,11 +58,12 @@ export async function getPeople(req: AuthenticatedRequest, res: Response): Promi
     }
 
     if (domain && domain !== 'all') {
-      filter.domain = domain;
+      filter.domain = String(domain);
     }
 
     if (search && typeof search === 'string') {
-      const regex = new RegExp(search.trim(), 'i');
+      const searchStr = escapeRegex(search.trim().slice(0, 50));
+      const regex = new RegExp(searchStr, 'i');
       filter.$or = [{ name: regex }, { email: regex }, { designation: regex }, { skills: regex }];
     }
 
@@ -134,10 +149,33 @@ export async function updateUser(req: AuthenticatedRequest, res: Response): Prom
       return;
     }
 
-    const { phone, skills, designation, domain, reportsTo, status, role } = req.body;
+    const parseResult = updateUserSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json({ error: parseResult.error.errors[0].message });
+      return;
+    }
 
-    // Both CEO and self can update phone and skills
-    if (phone !== undefined) targetUser.phone = phone;
+    const { name, phone, skills, designation, domain, reportsTo, status, role } = parseResult.data;
+
+    // Refuse to demote or deactivate the last remaining CEO
+    if (targetUser.role === 'ceo') {
+      const isDemoting = role !== undefined && role !== 'ceo';
+      const isDeactivating = status !== undefined && status === 'inactive';
+      if (isDemoting || isDeactivating) {
+        const activeCeoCount = await User.countDocuments({ role: 'ceo', status: 'active' });
+        if (activeCeoCount <= 1) {
+          res.status(400).json({ error: 'Cannot demote or deactivate the last remaining CEO.' });
+          return;
+        }
+      }
+    }
+
+    const previousRole = targetUser.role;
+    const previousStatus = targetUser.status;
+
+    // Both CEO and self can update name, phone, and skills
+    if (name !== undefined) targetUser.name = name.trim();
+    if (phone !== undefined) targetUser.phone = phone.trim();
     if (skills !== undefined && Array.isArray(skills)) targetUser.skills = skills;
 
     // Only CEO can update organizational fields
@@ -171,6 +209,16 @@ export async function updateUser(req: AuthenticatedRequest, res: Response): Prom
     }
 
     await targetUser.save();
+
+    // Call logAuditEvent for any role or status change
+    if ((role !== undefined && role !== previousRole) || (status !== undefined && status !== previousStatus)) {
+      await logAuditEvent(req, 'user_role_or_status_changed', 'User', id, {
+        previousRole,
+        newRole: targetUser.role,
+        previousStatus,
+        newStatus: targetUser.status
+      });
+    }
 
     const updated = await User.findById(id).populate('reportsTo', 'name email designation domain');
     res.status(200).json({

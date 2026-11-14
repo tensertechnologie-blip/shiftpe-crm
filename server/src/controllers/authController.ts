@@ -14,6 +14,7 @@ import { config } from '../config/env.js';
 import { AuthenticatedRequest, AuthUser } from '../middleware/auth.js';
 import { sendTemporaryPasswordEmail } from '../services/emailService.js';
 import { isEmailWhitelisted } from '../config/whitelist.js';
+import { logAuditEvent } from '../utils/audit.js';
 
 // Setup authenticator options
 authenticator.options = { window: 1 };
@@ -25,8 +26,7 @@ const loginSchema = z.object({
     .refine((val) => /@shiftpe\.(com|in)$/i.test(val.toLowerCase()), {
       message: 'Access restricted to official @shiftpe.com or @shiftpe.in company email addresses'
     }),
-  password: z.string().min(1, 'Password is required'),
-  bypassTotp: z.boolean().optional()
+  password: z.string().min(1, 'Password is required')
 });
 
 const totpVerifySchema = z.object({
@@ -52,16 +52,6 @@ const onboardingSchema = z.object({
   skills: z.array(z.string()).default([]),
   newPassword: z.string().min(8, 'Password must be at least 8 characters').optional()
 });
-
-function generateTemporaryPassword(): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let randomStr = '';
-  for (let i = 0; i < 4; i++) {
-    randomStr += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  const digits = Math.floor(1000 + Math.random() * 9000);
-  return `ShiftPe#${randomStr}${digits}`;
-}
 
 const inviteUserSchema = z.object({
   name: z.string().min(2, 'Name is required'),
@@ -90,14 +80,6 @@ export async function login(req: Request, res: Response): Promise<void> {
     const { email, password } = parseResult.data;
     const normalizedEmail = email.toLowerCase().trim();
 
-    // Enforce strict corporate email whitelist
-    if (!(await isEmailWhitelisted(normalizedEmail))) {
-      res.status(403).json({
-        error: 'Access denied: This email address is not in the authorized ShiftPe company directory whitelist. Contact ajay.founder@shiftpe.in to provision access.'
-      });
-      return;
-    }
-
     // Check database connection state
     if (mongoose.connection.readyState !== 1) {
       res.status(503).json({
@@ -106,9 +88,41 @@ export async function login(req: Request, res: Response): Promise<void> {
       return;
     }
 
+    // Enforce strict corporate email whitelist (return same 401 as wrong password to prevent email enumeration)
+    if (!(await isEmailWhitelisted(normalizedEmail))) {
+      await AuditLog.create({
+        action: 'LOGIN_FAILED',
+        actorId: new mongoose.Types.ObjectId(),
+        actorEmail: normalizedEmail,
+        actorRole: 'unknown',
+        targetType: 'User',
+        details: { email: normalizedEmail, reason: 'Email not whitelisted' },
+        ipAddress: req.ip || req.socket.remoteAddress || ''
+      });
+      res.status(401).json({ error: 'Invalid email or password' });
+      return;
+    }
+
     const user = await User.findOne({ email: normalizedEmail }).select('+passwordHash +totpSecret');
     if (!user) {
+      await AuditLog.create({
+        action: 'LOGIN_FAILED',
+        actorId: new mongoose.Types.ObjectId(),
+        actorEmail: normalizedEmail,
+        actorRole: 'unknown',
+        targetType: 'User',
+        details: { email: normalizedEmail, reason: 'User not found' },
+        ipAddress: req.ip || req.socket.remoteAddress || ''
+      });
       res.status(401).json({ error: 'Invalid email or password' });
+      return;
+    }
+
+    // Account lockout check
+    if (user.lockUntil && user.lockUntil > new Date()) {
+      res.status(429).json({
+        error: 'Account temporarily locked due to multiple failed attempts. Please try again later.'
+      });
       return;
     }
 
@@ -119,41 +133,42 @@ export async function login(req: Request, res: Response): Promise<void> {
 
     const isMatch = await bcrypt.compare(password, user.passwordHash);
     if (!isMatch) {
+      user.failedAttempts = (user.failedAttempts || 0) + 1;
+      if (user.failedAttempts >= 5) {
+        user.lockUntil = new Date(Date.now() + 15 * 60 * 1000);
+        user.failedAttempts = 0;
+        await user.save();
+        await AuditLog.create({
+          action: 'ACCOUNT_LOCKED',
+          actorId: user._id,
+          actorEmail: user.email,
+          actorRole: user.role,
+          targetId: user._id.toString(),
+          targetType: 'User',
+          details: { email: user.email, reason: 'Exceeded maximum failed password attempts' },
+          ipAddress: req.ip || req.socket.remoteAddress || ''
+        });
+      } else {
+        await user.save();
+        await AuditLog.create({
+          action: 'LOGIN_FAILED',
+          actorId: user._id,
+          actorEmail: user.email,
+          actorRole: user.role,
+          targetId: user._id.toString(),
+          targetType: 'User',
+          details: { email: user.email, failedAttempts: user.failedAttempts },
+          ipAddress: req.ip || req.socket.remoteAddress || ''
+        });
+      }
       res.status(401).json({ error: 'Invalid email or password' });
       return;
     }
 
-    // Direct password login (bypass TOTP if requested)
-    if (req.body.bypassTotp === true) {
-      await DirectoryAccess.findOneAndUpdate(
-        { email: user.email.toLowerCase().trim() },
-        { registered: true, registeredUserId: user._id }
-      );
-
-      const authPayload: AuthUser = {
-        userId: user._id.toString(),
-        email: user.email,
-        role: user.role,
-        name: user.name
-      };
-
-      const sessionToken = jwt.sign(authPayload, config.jwtSecret, { expiresIn: '7d' });
-
-      res.cookie('token', sessionToken, {
-        httpOnly: true,
-        secure: config.nodeEnv === 'production',
-        sameSite: 'lax',
-        maxAge: 7 * 24 * 60 * 60 * 1000
-      });
-
-      res.status(200).json({
-        status: 'authenticated',
-        message: 'Sign in successful',
-        token: sessionToken,
-        user: user.toJSON()
-      });
-      return;
-    }
+    // Success -> reset lockout counters
+    user.failedAttempts = 0;
+    user.lockUntil = undefined;
+    await user.save();
 
     // Check TOTP status
     if (!user.totpEnabled || !user.totpSecret) {
@@ -167,7 +182,7 @@ export async function login(req: Request, res: Response): Promise<void> {
       const qrCodeDataUrl = await qrcode.toDataURL(otpauthUrl);
 
       const tempToken = jwt.sign(
-        { userId: user._id.toString(), step: 'totp_setup' },
+        { userId: user._id.toString(), purpose: 'totp_setup' },
         config.jwtSecret,
         { expiresIn: '10m' }
       );
@@ -185,7 +200,7 @@ export async function login(req: Request, res: Response): Promise<void> {
 
     // TOTP already configured -> Prompt for 6-digit code
     const tempToken = jwt.sign(
-      { userId: user._id.toString(), step: 'totp_verify' },
+      { userId: user._id.toString(), purpose: 'totp_verify' },
       config.jwtSecret,
       { expiresIn: '10m' }
     );
@@ -212,11 +227,20 @@ export async function verifyTotp(req: Request, res: Response): Promise<void> {
 
     const { tempToken, code } = parseResult.data;
 
-    let decoded: { userId: string; step: string };
+    let decoded: { userId: string; purpose?: string; step?: string };
     try {
-      decoded = jwt.verify(tempToken, config.jwtSecret) as { userId: string; step: string };
+      decoded = jwt.verify(tempToken, config.jwtSecret, { algorithms: ['HS256'] }) as {
+        userId: string;
+        purpose?: string;
+        step?: string;
+      };
     } catch (e) {
       res.status(401).json({ error: 'Authentication session expired. Please log in again.' });
+      return;
+    }
+
+    if (decoded.purpose !== 'totp_setup' && decoded.purpose !== 'totp_verify') {
+      res.status(401).json({ error: 'Invalid token purpose' });
       return;
     }
 
@@ -226,20 +250,58 @@ export async function verifyTotp(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    // Emergency master codes: 888999 or 123456 (for uninstalled authenticator apps)
-    const isMasterEmergencyCode = code === '888999' || code === '123456';
-    const isValid = isMasterEmergencyCode || (user.totpSecret ? authenticator.check(code, user.totpSecret) : false);
-
-    if (!isValid) {
-      res.status(401).json({ error: 'Invalid 6-digit authenticator code. If your authenticator is uninstalled, use emergency passcode 888999.' });
+    // Account lockout check
+    if (user.lockUntil && user.lockUntil > new Date()) {
+      res.status(429).json({
+        error: 'Account temporarily locked due to multiple failed attempts. Please try again later.'
+      });
       return;
     }
+
+    const isValid = !!user.totpSecret && authenticator.check(code, user.totpSecret);
+
+    if (!isValid) {
+      user.failedAttempts = (user.failedAttempts || 0) + 1;
+      if (user.failedAttempts >= 5) {
+        user.lockUntil = new Date(Date.now() + 15 * 60 * 1000);
+        user.failedAttempts = 0;
+        await user.save();
+        await AuditLog.create({
+          action: 'ACCOUNT_LOCKED',
+          actorId: user._id,
+          actorEmail: user.email,
+          actorRole: user.role,
+          targetId: user._id.toString(),
+          targetType: 'User',
+          details: { email: user.email, reason: 'Exceeded maximum failed TOTP attempts' },
+          ipAddress: req.ip || req.socket.remoteAddress || ''
+        });
+      } else {
+        await user.save();
+        await AuditLog.create({
+          action: 'LOGIN_FAILED',
+          actorId: user._id,
+          actorEmail: user.email,
+          actorRole: user.role,
+          targetId: user._id.toString(),
+          targetType: 'User',
+          details: { email: user.email, reason: 'Invalid TOTP code', failedAttempts: user.failedAttempts },
+          ipAddress: req.ip || req.socket.remoteAddress || ''
+        });
+      }
+      res.status(401).json({ error: 'Invalid 6-digit authenticator code. Please check your authenticator app.' });
+      return;
+    }
+
+    // Success -> reset lockout counters
+    user.failedAttempts = 0;
+    user.lockUntil = undefined;
 
     // Enable TOTP if it was in setup mode
     if (!user.totpEnabled) {
       user.totpEnabled = true;
-      await user.save();
     }
+    await user.save();
 
     // Link directory entry as registered if present
     await DirectoryAccess.findOneAndUpdate(
@@ -252,16 +314,17 @@ export async function verifyTotp(req: Request, res: Response): Promise<void> {
       userId: user._id.toString(),
       email: user.email,
       role: user.role,
-      name: user.name
+      name: user.name,
+      purpose: 'session'
     };
 
-    const sessionToken = jwt.sign(authPayload, config.jwtSecret, { expiresIn: '7d' });
+    const sessionToken = jwt.sign(authPayload, config.jwtSecret, { expiresIn: '8h' });
 
     res.cookie('token', sessionToken, {
       httpOnly: true,
       secure: config.nodeEnv === 'production',
       sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+      maxAge: 8 * 60 * 60 * 1000 // 8 hours
     });
 
     res.status(200).json({
@@ -275,29 +338,64 @@ export async function verifyTotp(req: Request, res: Response): Promise<void> {
   }
 }
 
-export async function resetTotp(req: Request, res: Response): Promise<void> {
+export async function resetTotpForUser(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
-    const { email, password } = req.body;
-    if (!email || !password) {
-      res.status(400).json({ error: 'Email and password required' });
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      res.status(400).json({ error: 'Invalid user ID' });
       return;
     }
-    const user = await User.findOne({ email: email.toLowerCase().trim() }).select('+passwordHash');
-    if (!user) {
+
+    const targetUser = await User.findById(id);
+    if (!targetUser) {
       res.status(404).json({ error: 'User not found' });
       return;
     }
-    const isMatch = await bcrypt.compare(password, user.passwordHash);
-    if (!isMatch) {
-      res.status(401).json({ error: 'Invalid password' });
+
+    targetUser.totpEnabled = false;
+    targetUser.totpSecret = undefined;
+    await targetUser.save();
+
+    await logAuditEvent(req, 'totp_reset', 'User', id, {
+      targetEmail: targetUser.email
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `2FA has been successfully reset for ${targetUser.email}`
+    });
+  } catch (error) {
+    console.error('resetTotpForUser error:', error);
+    res.status(500).json({ error: 'Failed to reset 2FA' });
+  }
+}
+
+export async function unlockUser(req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      res.status(400).json({ error: 'Invalid user ID' });
       return;
     }
-    user.totpEnabled = false;
-    user.totpSecret = undefined;
-    await user.save();
-    res.status(200).json({ message: '2FA reset successfully. You can now log in and scan a new QR code.' });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to reset 2FA' });
+
+    const targetUser = await User.findById(id);
+    if (!targetUser) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    targetUser.failedAttempts = 0;
+    targetUser.lockUntil = undefined;
+    await targetUser.save();
+
+    await logAuditEvent(req, 'account_unlocked', 'User', id, {
+      email: targetUser.email
+    });
+
+    res.status(200).json({ message: 'Account unlocked' });
+  } catch (error) {
+    console.error('unlockUser error:', error);
+    res.status(500).json({ error: 'Failed to unlock user account' });
   }
 }
 
@@ -373,6 +471,11 @@ export function logout(req: Request, res: Response): void {
 }
 
 export async function registerTeammate(req: Request, res: Response): Promise<void> {
+  const genericResponse = {
+    success: true,
+    message: 'If this email is authorized, access instructions have been sent to it.'
+  };
+
   try {
     const parseResult = registerTeammateSchema.safeParse(req.body);
     if (!parseResult.success) {
@@ -383,14 +486,6 @@ export async function registerTeammate(req: Request, res: Response): Promise<voi
     const { email, name } = parseResult.data;
     const normalizedEmail = email.toLowerCase().trim();
 
-    // Enforce strict corporate email whitelist
-    if (!(await isEmailWhitelisted(normalizedEmail))) {
-      res.status(403).json({
-        error: 'Registration restricted: This email is not in the authorized ShiftPe company directory whitelist. Only provisioned mailboxes (e.g. ritesh.founder@shiftpe.in, ajay.founder@shiftpe.in) are permitted. Contact ajay.founder@shiftpe.in.'
-      });
-      return;
-    }
-
     // Check database connection state
     if (mongoose.connection.readyState !== 1) {
       res.status(503).json({
@@ -399,20 +494,16 @@ export async function registerTeammate(req: Request, res: Response): Promise<voi
       return;
     }
 
-    let user = await User.findOne({ email: normalizedEmail });
-    if (user && user.onboardingCompleted && user.status === 'active') {
-      res.status(409).json({
-        error: 'Account already registered and active. Please sign in with your email and password.'
-      });
-      return;
-    }
+    const isWhitelisted = await isEmailWhitelisted(normalizedEmail);
+    const existingUser = await User.findOne({ email: normalizedEmail });
 
-    const tempPassword = generateTemporaryPassword();
-    const passwordHash = await bcrypt.hash(tempPassword, 10);
-    const resolvedName = name?.trim() || normalizedEmail.split('@')[0].replace(/[._]/g, ' ');
+    // Only create a user if the email is whitelisted AND no user exists. Never modify existing user.
+    if (isWhitelisted && !existingUser) {
+      const tempPassword = crypto.randomBytes(9).toString('base64url');
+      const passwordHash = await bcrypt.hash(tempPassword, 10);
+      const resolvedName = name?.trim() || normalizedEmail.split('@')[0].replace(/[._]/g, ' ');
 
-    if (!user) {
-      user = await User.create({
+      const newUser = await User.create({
         name: resolvedName,
         email: normalizedEmail,
         passwordHash,
@@ -424,39 +515,28 @@ export async function registerTeammate(req: Request, res: Response): Promise<voi
         isTemporaryPassword: true,
         status: 'active'
       });
-    } else {
-      // Re-issue temporary password for teammate who hasn't completed onboarding yet
-      user.passwordHash = passwordHash;
-      user.isTemporaryPassword = true;
-      user.onboardingCompleted = false;
-      await user.save();
+
+      // Link directory entry as registered if present
+      await DirectoryAccess.findOneAndUpdate(
+        { email: newUser.email.toLowerCase().trim() },
+        { registered: true, registeredUserId: newUser._id }
+      );
+
+      // Send email with temporary password
+      await sendTemporaryPasswordEmail(normalizedEmail, resolvedName, tempPassword);
+
+      await AuditLog.create({
+        action: 'TEAMMATE_REGISTERED',
+        actorId: newUser._id,
+        actorEmail: newUser.email,
+        actorRole: newUser.role,
+        targetId: newUser._id.toString(),
+        targetType: 'User',
+        details: { email: newUser.email }
+      });
     }
 
-    // Link directory entry as registered if present
-    await DirectoryAccess.findOneAndUpdate(
-      { email: user.email.toLowerCase().trim() },
-      { registered: true, registeredUserId: user._id }
-    );
-
-    // Send email with temporary password
-    const emailResult = await sendTemporaryPasswordEmail(normalizedEmail, resolvedName, tempPassword);
-
-    await AuditLog.create({
-      action: 'TEAMMATE_REGISTERED',
-      actorId: user._id,
-      actorEmail: user.email,
-      actorRole: user.role,
-      targetId: user._id.toString(),
-      targetType: 'User',
-      details: { email: user.email, emailSent: emailResult.success }
-    });
-
-    res.status(200).json({
-      success: true,
-      message: `Access credentials dispatched to ${normalizedEmail}. Please check your business email inbox and enter the temporary password to sign in.`,
-      email: normalizedEmail,
-      devPassword: emailResult.preview ? tempPassword : undefined
-    });
+    res.status(200).json(genericResponse);
   } catch (error: any) {
     console.error('Registration error:', error);
     res.status(500).json({ error: 'Failed to process registration: ' + error.message });

@@ -167,7 +167,11 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ isModal = false,
   };
 
   const content = (
-    <div style={{
+    <div
+      role={isModal ? "dialog" : undefined}
+      aria-modal={isModal ? "true" : undefined}
+      aria-label={isModal ? "Teammate onboarding setup" : undefined}
+      style={{
       width: '100%',
       maxWidth: '620px',
       backgroundColor: 'var(--panel)',
@@ -182,6 +186,7 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ isModal = false,
       {isModal && onClose && (
         <button
           onClick={onClose}
+          aria-label="Close onboarding modal"
           style={{
             position: 'absolute',
             top: '20px',
@@ -228,13 +233,14 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ isModal = false,
 
       <form onSubmit={handleSubmit}>
         {/* Identity Info */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }} className="modal-grid-2">
           <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text)', marginBottom: '6px' }}>
+            <label htmlFor="onboarding-name" style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text)', marginBottom: '6px' }}>
               Full Name
             </label>
             <div style={{ position: 'relative' }}>
               <input
+                id="onboarding-name"
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -255,11 +261,12 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ isModal = false,
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text)', marginBottom: '6px' }}>
+            <label htmlFor="onboarding-phone" style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text)', marginBottom: '6px' }}>
               Official Phone Number
             </label>
             <div style={{ position: 'relative' }}>
               <input
+                id="onboarding-phone"
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
@@ -281,13 +288,14 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ isModal = false,
         </div>
 
         {/* Department & Designation */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }} className="modal-grid-2">
           <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text)', marginBottom: '6px' }}>
+            <label htmlFor="onboarding-domain" style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text)', marginBottom: '6px' }}>
               Department / Domain
             </label>
             <div style={{ position: 'relative' }}>
               <select
+                id="onboarding-domain"
                 value={domain}
                 onChange={(e) => setDomain(e.target.value)}
                 style={{
@@ -309,11 +317,12 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ isModal = false,
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text)', marginBottom: '6px' }}>
+            <label htmlFor="onboarding-designation" style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text)', marginBottom: '6px' }}>
               Job Title / Designation
             </label>
             <div style={{ position: 'relative' }}>
               <input
+                id="onboarding-designation"
                 type="text"
                 value={designation}
                 onChange={(e) => setDesignation(e.target.value)}
@@ -441,9 +450,13 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ isModal = false,
             Replace the temporary password received in your business email with your own permanent password.
           </p>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }} className="modal-grid-2">
             <div>
+              <label htmlFor="onboarding-new-password" style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text)', marginBottom: '4px' }}>
+                New Password
+              </label>
               <input
+                id="onboarding-new-password"
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
@@ -461,7 +474,11 @@ export const OnboardingView: React.FC<OnboardingViewProps> = ({ isModal = false,
             </div>
 
             <div>
+              <label htmlFor="onboarding-confirm-password" style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text)', marginBottom: '4px' }}>
+                Confirm Password
+              </label>
               <input
+                id="onboarding-confirm-password"
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}

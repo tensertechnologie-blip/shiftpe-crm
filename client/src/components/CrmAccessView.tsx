@@ -501,7 +501,9 @@ export const CrmAccessView: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ position: 'relative', width: '280px' }}>
               <Search size={14} style={{ position: 'absolute', left: '12px', top: '10px', color: 'var(--subtle)' }} />
+              <label htmlFor="crm-access-search" style={{ position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', clip: 'rect(0,0,0,0)' }}>Search directory</label>
               <input
+                id="crm-access-search"
                 type="text"
                 placeholder="Search email, name, role..."
                 value={searchTerm}

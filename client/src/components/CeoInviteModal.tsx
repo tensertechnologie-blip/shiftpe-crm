@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { X, UserPlus, CheckCircle2, AlertCircle } from 'lucide-react';
 
@@ -18,6 +18,38 @@ export const CeoInviteModal: React.FC<CeoInviteModalProps> = ({ isOpen, onClose 
   const [phone, setPhone] = useState('');
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  // Focus trap for modal
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+      if (e.key === 'Tab' && modalRef.current) {
+        const focusable = modalRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusable.length === 0) return;
+
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+
+        if (e.shiftKey && document.activeElement === first) {
+          last.focus();
+          e.preventDefault();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          first.focus();
+          e.preventDefault();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -82,16 +114,22 @@ export const CeoInviteModal: React.FC<CeoInviteModalProps> = ({ isOpen, onClose 
       zIndex: 1000,
       padding: '20px'
     }}>
-      <div style={{
-        width: '100%',
-        maxWidth: '520px',
-        backgroundColor: 'var(--panel)',
-        border: '1px solid var(--line)',
-        borderRadius: 'var(--radius-lg)',
-        padding: '28px',
-        boxShadow: '0 12px 40px rgba(0,0,0,0.6)',
-        position: 'relative'
-      }}>
+      <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Invite new team member"
+        style={{
+          width: '100%',
+          maxWidth: '520px',
+          backgroundColor: 'var(--panel)',
+          border: '1px solid var(--line)',
+          borderRadius: 'var(--radius-lg)',
+          padding: '28px',
+          boxShadow: '0 12px 40px rgba(0,0,0,0.6)',
+          position: 'relative'
+        }}
+      >
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -111,6 +149,7 @@ export const CeoInviteModal: React.FC<CeoInviteModalProps> = ({ isOpen, onClose 
 
           <button
             onClick={onClose}
+            aria-label="Close invite modal"
             style={{
               padding: '6px',
               borderRadius: 'var(--radius-sm)',
@@ -141,10 +180,11 @@ export const CeoInviteModal: React.FC<CeoInviteModalProps> = ({ isOpen, onClose 
         )}
 
         <form onSubmit={handleSubmit}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }} className="modal-grid-2">
             <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Full Name</label>
+              <label htmlFor="invite-name" style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Full Name</label>
               <input
+                id="invite-name"
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -162,8 +202,9 @@ export const CeoInviteModal: React.FC<CeoInviteModalProps> = ({ isOpen, onClose 
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Company Email</label>
+              <label htmlFor="invite-email" style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Company Email</label>
               <input
+                id="invite-email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -181,10 +222,11 @@ export const CeoInviteModal: React.FC<CeoInviteModalProps> = ({ isOpen, onClose 
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }} className="modal-grid-2">
             <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Role</label>
+              <label htmlFor="invite-role" style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Role</label>
               <select
+                id="invite-role"
                 value={role}
                 onChange={(e) => setRole(e.target.value as any)}
                 style={{
@@ -202,8 +244,9 @@ export const CeoInviteModal: React.FC<CeoInviteModalProps> = ({ isOpen, onClose 
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Domain</label>
+              <label htmlFor="invite-domain" style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Domain</label>
               <select
+                id="invite-domain"
                 value={domain}
                 onChange={(e) => setDomain(e.target.value)}
                 style={{
@@ -224,10 +267,11 @@ export const CeoInviteModal: React.FC<CeoInviteModalProps> = ({ isOpen, onClose 
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '18px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '18px' }} className="modal-grid-2">
             <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Designation</label>
+              <label htmlFor="invite-designation" style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Designation</label>
               <input
+                id="invite-designation"
                 type="text"
                 value={designation}
                 onChange={(e) => setDesignation(e.target.value)}
@@ -244,8 +288,9 @@ export const CeoInviteModal: React.FC<CeoInviteModalProps> = ({ isOpen, onClose 
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Initial Temporary Password</label>
+              <label htmlFor="invite-password" style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Initial Temporary Password</label>
               <input
+                id="invite-password"
                 type="text"
                 value={initialPassword}
                 onChange={(e) => setInitialPassword(e.target.value)}

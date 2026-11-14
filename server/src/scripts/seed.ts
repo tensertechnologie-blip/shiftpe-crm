@@ -60,82 +60,86 @@ export async function runSeed(): Promise<void> {
     console.log(`[Seed] Updated existing CEO account: ${ceoEmail}`);
   }
 
-  // 4. Seed 5 Sample Members
-  const sampleMemberPassword = 'ShiftPeSample2026!';
-  const memberHash = await bcrypt.hash(sampleMemberPassword, 10);
+  // 4. Seed 5 Sample Members (Skip in production)
+  if (process.env.NODE_ENV !== 'production') {
+    const sampleMemberPassword = 'ShiftPeSample2026!';
+    const memberHash = await bcrypt.hash(sampleMemberPassword, 10);
 
-  const sampleMembers = [
-    {
-      name: 'Sample Alex',
-      email: 'sample.alex@shiftpe.com',
-      role: 'member' as const,
-      designation: 'Senior Frontend Engineer',
-      domain: 'Engineering',
-      skills: ['React', 'TypeScript', 'Tailwind', 'Performance'],
-      phone: '+91 9876543211',
-      reportsTo: ceoUser._id
-    },
-    {
-      name: 'Sample Priya',
-      email: 'sample.priya@shiftpe.com',
-      role: 'member' as const,
-      designation: 'Lead Product Designer',
-      domain: 'Design',
-      skills: ['UI/UX', 'Figma', 'Design Systems', 'User Research'],
-      phone: '+91 9876543212',
-      reportsTo: ceoUser._id
-    },
-    {
-      name: 'Sample Rahul',
-      email: 'sample.rahul@shiftpe.com',
-      role: 'member' as const,
-      designation: 'Growth & Marketing Lead',
-      domain: 'Marketing',
-      skills: ['SEO', 'Content Strategy', 'Social Media', 'Analytics'],
-      phone: '+91 9876543213',
-      reportsTo: ceoUser._id
-    },
-    {
-      name: 'Sample Neha',
-      email: 'sample.neha@shiftpe.com',
-      role: 'manager' as const,
-      designation: 'Operations Manager',
-      domain: 'Operations',
-      skills: ['Process Optimization', 'Vendor Relations', 'Team Coordination'],
-      phone: '+91 9876543214',
-      reportsTo: ceoUser._id
-    },
-    {
-      name: 'Sample David',
-      email: 'sample.david@shiftpe.com',
-      role: 'member' as const,
-      designation: 'Backend Systems Engineer',
-      domain: 'Engineering',
-      skills: ['Node.js', 'MongoDB', 'Distributed Systems', 'Security'],
-      phone: '+91 9876543215',
-      reportsTo: ceoUser._id
-    }
-  ];
-
-  for (const m of sampleMembers) {
-    await User.findOneAndUpdate(
-      { email: m.email },
+    const sampleMembers = [
       {
-        name: m.name,
-        email: m.email,
-        passwordHash: memberHash,
-        role: m.role,
-        designation: m.designation,
-        domain: m.domain,
-        skills: m.skills,
-        phone: m.phone,
-        reportsTo: m.reportsTo,
-        totpEnabled: false,
-        status: 'active'
+        name: 'Sample Alex',
+        email: 'sample.alex@shiftpe.com',
+        role: 'member' as const,
+        designation: 'Senior Frontend Engineer',
+        domain: 'Engineering',
+        skills: ['React', 'TypeScript', 'Tailwind', 'Performance'],
+        phone: '+91 9876543211',
+        reportsTo: ceoUser._id
       },
-      { upsert: true, new: true }
-    );
-    console.log(`[Seed] Created/Updated sample user: ${m.name} (${m.email}) [Role: ${m.role}]`);
+      {
+        name: 'Sample Priya',
+        email: 'sample.priya@shiftpe.com',
+        role: 'member' as const,
+        designation: 'Lead Product Designer',
+        domain: 'Design',
+        skills: ['UI/UX', 'Figma', 'Design Systems', 'User Research'],
+        phone: '+91 9876543212',
+        reportsTo: ceoUser._id
+      },
+      {
+        name: 'Sample Rahul',
+        email: 'sample.rahul@shiftpe.com',
+        role: 'member' as const,
+        designation: 'Growth & Marketing Lead',
+        domain: 'Marketing',
+        skills: ['SEO', 'Content Strategy', 'Social Media', 'Analytics'],
+        phone: '+91 9876543213',
+        reportsTo: ceoUser._id
+      },
+      {
+        name: 'Sample Neha',
+        email: 'sample.neha@shiftpe.com',
+        role: 'manager' as const,
+        designation: 'Operations Manager',
+        domain: 'Operations',
+        skills: ['Process Optimization', 'Vendor Relations', 'Team Coordination'],
+        phone: '+91 9876543214',
+        reportsTo: ceoUser._id
+      },
+      {
+        name: 'Sample David',
+        email: 'sample.david@shiftpe.com',
+        role: 'member' as const,
+        designation: 'Backend Systems Engineer',
+        domain: 'Engineering',
+        skills: ['Node.js', 'MongoDB', 'Distributed Systems', 'Security'],
+        phone: '+91 9876543215',
+        reportsTo: ceoUser._id
+      }
+    ];
+
+    for (const m of sampleMembers) {
+      await User.findOneAndUpdate(
+        { email: m.email },
+        {
+          name: m.name,
+          email: m.email,
+          passwordHash: memberHash,
+          role: m.role,
+          designation: m.designation,
+          domain: m.domain,
+          skills: m.skills,
+          phone: m.phone,
+          reportsTo: m.reportsTo,
+          totpEnabled: false,
+          status: 'active'
+        },
+        { upsert: true, new: true }
+      );
+      console.log(`[Seed] Created/Updated sample user: ${m.name} (${m.email}) [Role: ${m.role}]`);
+    }
+  } else {
+    console.log('[Seed] Skipping sample members in production environment.');
   }
 
   // 5. Seed Official Announcements & Legacy Milestones
@@ -175,12 +179,7 @@ export async function runSeed(): Promise<void> {
 
   console.log('\n======================================================');
   console.log('[Seed] Database seed completed successfully!');
-  console.log('CEO Login:');
-  console.log(`  Email:    ${ceoEmail}`);
-  console.log(`  Password: ${config.ceo.password}`);
-  console.log('Sample Member Logins:');
-  console.log(`  Emails:   sample.alex@shiftpe.com, sample.priya@shiftpe.com, etc.`);
-  console.log(`  Password: ${sampleMemberPassword}`);
+  console.log(`CEO Account: ${ceoEmail}`);
   console.log('======================================================\n');
 
   await disconnectDB();

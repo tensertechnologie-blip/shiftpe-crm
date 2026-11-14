@@ -15,9 +15,12 @@ import auditRoutes from './routes/auditRoutes.js';
 import announcementRoutes from './routes/announcementRoutes.js';
 import directoryRoutes from './routes/directoryRoutes.js';
 import wikiRoutes from './routes/wikiRoutes.js';
+import { apiLimiter } from './middleware/rateLimiter.js';
 
 export function createApp(): Express {
   const app = express();
+
+  app.set('trust proxy', 1);
 
   // Security Headers
   app.use(helmet());
@@ -33,9 +36,12 @@ export function createApp(): Express {
   );
 
   // Body Parsing & Cookies
-  app.use(express.json());
+  app.use(express.json({ limit: '100kb' }));
   app.use(express.urlencoded({ extended: true }));
   app.use(cookieParser());
+
+  // Global API rate limiting
+  app.use('/api', apiLimiter);
 
   // Health check endpoint
   app.get('/api/health', (req: Request, res: Response) => {
@@ -73,7 +79,11 @@ export function createApp(): Express {
   }
 
   // Global Error Handler
-  app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+  app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+    if (err.type === 'entity.parse.failed') {
+      res.status(400).json({ error: 'Invalid JSON body' });
+      return;
+    }
     console.error('Unhandled Server Error:', err);
     res.status(500).json({
       error: config.nodeEnv === 'production' ? 'Internal server error' : err.message

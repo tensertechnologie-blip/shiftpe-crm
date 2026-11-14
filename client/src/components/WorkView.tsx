@@ -144,12 +144,13 @@ export const WorkView: React.FC = () => {
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px', marginBottom: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px', marginBottom: '16px' }} className="modal-grid-2">
             <div>
-              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '6px' }}>
+              <label htmlFor="work-title-input" style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '6px' }}>
                 Deliverable Title
               </label>
               <input
+                id="work-title-input"
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
@@ -160,10 +161,11 @@ export const WorkView: React.FC = () => {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '6px' }}>
+              <label htmlFor="work-hours-input" style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '6px' }}>
                 Hours Spent
               </label>
               <input
+                id="work-hours-input"
                 type="number"
                 step="0.5"
                 min="0.5"
@@ -178,10 +180,11 @@ export const WorkView: React.FC = () => {
           </div>
 
           <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '6px' }}>
+            <label htmlFor="work-desc-input" style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '6px' }}>
               Detailed Description & Accomplishments
             </label>
             <textarea
+              id="work-desc-input"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
@@ -191,12 +194,13 @@ export const WorkView: React.FC = () => {
             />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px', marginBottom: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px', marginBottom: '20px' }} className="modal-grid-2">
             <div>
-              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '6px' }}>
+              <label htmlFor="work-link-input" style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, marginBottom: '6px' }}>
                 Artifact / PR / Figma Link (Optional)
               </label>
               <input
+                id="work-link-input"
                 type="url"
                 value={link}
                 onChange={(e) => setLink(e.target.value)}
@@ -294,7 +298,7 @@ export const WorkView: React.FC = () => {
                         href={item.link}
                         target="_blank"
                         rel="noreferrer"
-                        style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--accent-teal)' }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--shiftpe-coral)' }}
                       >
                         <ExternalLink size={12} />
                         View Deliverable

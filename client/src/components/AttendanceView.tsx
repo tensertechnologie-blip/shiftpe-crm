@@ -302,11 +302,11 @@ export const AttendanceView: React.FC = () => {
       </div>
 
       {/* Attendance History Table */}
-      <div style={{
+      <div className="table-container table-scroll" style={{
         backgroundColor: 'var(--panel)',
         border: '1px solid var(--line)',
         borderRadius: 'var(--radius-md)',
-        overflow: 'hidden'
+        overflowX: 'auto'
       }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h3 style={{ fontSize: '15px', fontWeight: 700 }}>Attendance Records Log</h3>

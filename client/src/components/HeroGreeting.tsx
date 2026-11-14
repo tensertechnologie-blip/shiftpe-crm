@@ -28,7 +28,7 @@ export const HeroGreeting: React.FC = () => {
     }}>
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-          <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--shiftpe-teal)', fontWeight: 700 }}>
+          <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--shiftpe-coral)', fontWeight: 700 }}>
             ShiftPe Team Workspace
           </span>
           <span style={{ color: 'var(--subtle)', fontSize: '12px' }}>&bull;</span>
@@ -44,7 +44,7 @@ export const HeroGreeting: React.FC = () => {
           letterSpacing: '-0.5px',
           lineHeight: 1.2
         }}>
-          Hi <span style={{ color: 'var(--shiftpe-teal)' }}>{firstName}</span>! Welcome to ShiftPe.
+          Hi <span style={{ color: 'var(--shiftpe-coral)' }}>{firstName}</span>! Welcome to ShiftPe.
         </h1>
       </div>
 
@@ -58,11 +58,11 @@ export const HeroGreeting: React.FC = () => {
           alignItems: 'center',
           gap: '6px',
           padding: '6px 12px',
-          backgroundColor: 'var(--shiftpe-teal-light)',
-          border: '1px solid var(--shiftpe-teal-border)',
+          backgroundColor: 'var(--shiftpe-coral-light)',
+          border: '1px solid var(--shiftpe-coral-border)',
           borderRadius: 'var(--radius-sm)',
           fontSize: '12px',
-          color: 'var(--shiftpe-teal)',
+          color: 'var(--shiftpe-coral)',
           fontWeight: 600
         }}>
           <ShieldCheck size={14} />
