@@ -26,7 +26,7 @@ export const CORPORATE_ACCOUNTS: CorporateAccountConfig[] = [
   {
     email: 'ritesh.founder@shiftpe.in',
     name: 'Ritesh',
-    passwordPlainText: 'Ritesh@ShiftPe2026',
+    passwordPlainText: 'Rit@84912026',
     role: 'ceo',
     designation: 'Co-Founder & Product Lead',
     domain: 'Executive',
@@ -35,7 +35,7 @@ export const CORPORATE_ACCOUNTS: CorporateAccountConfig[] = [
   {
     email: 'shubham.yambadwar@shiftpe.in',
     name: 'Shubham Yambadwar',
-    passwordPlainText: 'Shubham@ShiftPe2026',
+    passwordPlainText: 'Shu@73192026',
     role: 'manager',
     designation: 'Lead Architect & Engineering',
     domain: 'Engineering',
@@ -44,7 +44,7 @@ export const CORPORATE_ACCOUNTS: CorporateAccountConfig[] = [
   {
     email: 'prafull.dongre@shiftpe.in',
     name: 'Prafull Dongre',
-    passwordPlainText: 'Prafull@ShiftPe2026',
+    passwordPlainText: 'Pra@95242026',
     role: 'manager',
     designation: 'Operations & Growth Lead',
     domain: 'Operations',
@@ -53,7 +53,7 @@ export const CORPORATE_ACCOUNTS: CorporateAccountConfig[] = [
   {
     email: 'support@shiftpe.in',
     name: 'ShiftPe Support',
-    passwordPlainText: 'Support@ShiftPe2026',
+    passwordPlainText: 'Sup@61832026',
     role: 'member',
     designation: 'Customer Operations & Support Lead',
     domain: 'Operations',
@@ -62,7 +62,7 @@ export const CORPORATE_ACCOUNTS: CorporateAccountConfig[] = [
   {
     email: 'contact@shiftpe.in',
     name: 'ShiftPe Contact',
-    passwordPlainText: 'Contact@ShiftPe2026',
+    passwordPlainText: 'Con@47292026',
     role: 'member',
     designation: 'Communications & Public Relations',
     domain: 'Marketing',
@@ -71,7 +71,7 @@ export const CORPORATE_ACCOUNTS: CorporateAccountConfig[] = [
   {
     email: 'founders@shiftpe.in',
     name: 'ShiftPe Founders Office',
-    passwordPlainText: 'Founders@ShiftPe2026',
+    passwordPlainText: 'Fnd@82052026',
     role: 'ceo',
     designation: 'Founders Office',
     domain: 'Executive',
