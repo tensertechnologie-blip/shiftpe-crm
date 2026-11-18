@@ -17,6 +17,7 @@ import { OnboardingView } from './components/OnboardingView';
 import { WikiView } from './components/WikiView';
 import { CrmAccessView } from './components/CrmAccessView';
 import { AuditLogView } from './components/AuditLogView';
+import { UrgentAlertBanner } from './components/UrgentAlertBanner';
 
 const tabToHash = (tab: NavTab): string => {
   switch (tab) {
@@ -65,6 +66,12 @@ export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<NavTab>('Home');
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [isOnboardingModalOpen, setIsOnboardingModalOpen] = useState(false);
+  const [urgentAlert, setUrgentAlert] = useState<{
+    title: string;
+    message: string;
+    actionText?: string;
+    onAction?: () => void;
+  } | null>(null);
 
   // Hash routing synchronization
   useEffect(() => {
@@ -134,7 +141,19 @@ export const App: React.FC = () => {
         onSelectTab={handleSelectTab}
         onOpenInvite={() => setIsInviteOpen(true)}
         onOpenOnboarding={() => setIsOnboardingModalOpen(true)}
+        onUrgentAlertChange={setUrgentAlert}
       />
+
+      {/* Urgent Organization Alert Banner (Pop-up) */}
+      {urgentAlert && (
+        <UrgentAlertBanner
+          title={urgentAlert.title}
+          message={urgentAlert.message}
+          actionText={urgentAlert.actionText}
+          onAction={urgentAlert.onAction}
+          onDismiss={() => setUrgentAlert(null)}
+        />
+      )}
 
       {/* 2. Main Workspace Canvas */}
       <main style={{ flex: 1, padding: '28px 32px', minWidth: 0, maxWidth: '1480px', width: '100%', margin: '0 auto' }}>

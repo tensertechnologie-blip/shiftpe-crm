@@ -1,5 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
+import { BroadcastAlertModal } from './BroadcastAlertModal';
 import {
   Bell,
   AlertCircle,
@@ -8,16 +10,19 @@ import {
   ExternalLink,
   ShieldCheck,
   CheckSquare,
-  Clock
+  Clock,
+  Megaphone,
+  UserCheck
 } from 'lucide-react';
 
 interface NotificationItem {
   id: string;
-  type: 'urgent' | 'task' | 'security' | 'info';
+  type: 'urgent' | 'announcement' | 'role_change' | 'attendance' | 'task' | 'security' | 'info';
   title: string;
   message: string;
   timestamp: string;
   read: boolean;
+  priority?: string;
   actionText?: string;
   onAction?: () => void;
 }
@@ -25,14 +30,20 @@ interface NotificationItem {
 interface NotificationPanelProps {
   onOpenOnboarding?: () => void;
   onSelectTab?: (tab: any) => void;
+  onUrgentAlertChange?: (urgentAlert: { title: string; message: string; actionText?: string; onAction?: () => void } | null) => void;
 }
 
 export const NotificationPanel: React.FC<NotificationPanelProps> = ({
   onOpenOnboarding,
-  onSelectTab
+  onSelectTab,
+  onUrgentAlertChange
 }) => {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
+  const { showToast } = useToast();
+
   const [isOpen, setIsOpen] = useState(false);
+  const [isBroadcastOpen, setIsBroadcastOpen] = useState(false);
+  const [serverNotifications, setServerNotifications] = useState<any[]>([]);
   const [dismissedIds, setDismissedIds] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('shiftpe_dismissed_notifications');
@@ -41,7 +52,32 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
       return [];
     }
   });
+
   const panelRef = useRef<HTMLDivElement>(null);
+  const isCeo = user?.role === 'ceo';
+
+  // Fetch notifications from server
+  const fetchServerNotifications = useCallback(async () => {
+    if (!token) return;
+    try {
+      const res = await fetch('/api/notifications', {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include'
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setServerNotifications(data.notifications || []);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch server notifications:', err);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    fetchServerNotifications();
+    const interval = setInterval(fetchServerNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [fetchServerNotifications]);
 
   // Close when clicking outside
   useEffect(() => {
@@ -58,37 +94,64 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
     };
   }, [isOpen]);
 
-  const dismissNotification = (id: string, e?: React.MouseEvent) => {
+  const dismissNotification = async (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    setDismissedIds(prev => {
+    setDismissedIds((prev) => {
       const next = [...prev, id];
       try {
         localStorage.setItem('shiftpe_dismissed_notifications', JSON.stringify(next));
       } catch {}
       return next;
     });
+
+    // If server notification, mark on backend
+    if (!id.startsWith('local-') && token) {
+      try {
+        await fetch(`/api/notifications/${id}/read`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: 'include'
+        });
+      } catch {}
+    }
   };
 
-  const markAllRead = () => {
-    const allIds = notifications.map(n => n.id);
+  const markAllRead = async () => {
+    const allIds = notifications.map((n) => n.id);
     setDismissedIds(allIds);
     try {
       localStorage.setItem('shiftpe_dismissed_notifications', JSON.stringify(allIds));
     } catch {}
+
+    if (token) {
+      try {
+        await fetch('/api/notifications/read-all', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: 'include'
+        });
+        fetchServerNotifications();
+      } catch {}
+    }
+
+    showToast({
+      type: 'info',
+      title: 'All Notifications Marked Read'
+    });
   };
 
-  // Build notifications list dynamically based on state
+  // Build combined notification list
   const notifications: NotificationItem[] = [];
 
   // 1. Mandatory Pending Onboarding Notification
   if (user && !user.onboardingCompleted) {
     notifications.push({
-      id: 'onboarding-pending',
+      id: 'local-onboarding-pending',
       type: 'urgent',
       title: 'Action Required: Complete Teammate Onboarding',
       message: 'You skipped initial onboarding. Please provide your department, designation, phone number, and permanent password.',
       timestamp: 'Action Pending',
-      read: dismissedIds.includes('onboarding-pending'),
+      read: dismissedIds.includes('local-onboarding-pending'),
       actionText: 'Complete Profile Now',
       onAction: () => {
         setIsOpen(false);
@@ -97,12 +160,12 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
     });
 
     notifications.push({
-      id: 'task-onboarding-assigned',
+      id: 'local-task-onboarding-assigned',
       type: 'task',
       title: 'New High-Priority Task Assigned',
       message: 'Task "Complete Teammate Onboarding & Profile" was automatically added to your Daily Checklist.',
       timestamp: 'Due in 7 days',
-      read: dismissedIds.includes('task-onboarding-assigned'),
+      read: dismissedIds.includes('local-task-onboarding-assigned'),
       actionText: 'View in Daily Checklist',
       onAction: () => {
         setIsOpen(false);
@@ -111,24 +174,45 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
     });
   }
 
-  // 2. Corporate Security Whitelist Confirmation
+  // 2. Server notifications
+  serverNotifications.forEach((sn) => {
+    const isRead = sn.read || dismissedIds.includes(sn._id);
+    notifications.push({
+      id: sn._id,
+      type: sn.type || 'info',
+      title: sn.title,
+      message: sn.message,
+      timestamp: new Date(sn.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+      read: isRead,
+      priority: sn.priority,
+      actionText: sn.actionText,
+      onAction: () => {
+        dismissNotification(sn._id);
+        if (sn.actionLink && sn.actionLink.startsWith('#/')) {
+          window.location.hash = sn.actionLink;
+        }
+      }
+    });
+  });
+
+  // 3. Corporate Security Whitelist Confirmation
   notifications.push({
-    id: 'security-whitelist-active',
+    id: 'local-security-whitelist-active',
     type: 'security',
     title: 'Corporate Whitelist Access Verified',
     message: `Signed in via authorized ShiftPe directory account (${user?.email}). Full internal CRM permissions active.`,
     timestamp: 'Active Session',
-    read: dismissedIds.includes('security-whitelist-active')
+    read: dismissedIds.includes('local-security-whitelist-active')
   });
 
-  // 3. Attendance Daily Prompt
+  // 4. Attendance Daily Prompt
   notifications.push({
-    id: 'attendance-reminder',
+    id: 'local-attendance-reminder',
     type: 'info',
     title: 'Daily Attendance Reminder',
     message: 'Make sure to clock in your daily shift and log your work contributions.',
     timestamp: 'Today',
-    read: dismissedIds.includes('attendance-reminder'),
+    read: dismissedIds.includes('local-attendance-reminder'),
     actionText: 'Go to Attendance',
     onAction: () => {
       setIsOpen(false);
@@ -136,14 +220,90 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
     }
   });
 
-  const unreadCount = notifications.filter(n => !n.read).length;
-  const hasUrgent = notifications.some(n => n.type === 'urgent' && !n.read);
+  const unreadCount = notifications.filter((n) => !n.read).length;
+  const urgentNotification = notifications.find((n) => (n.type === 'urgent' || n.priority === 'high') && !n.read);
+
+  // Sync urgent alert to parent if callback provided
+  useEffect(() => {
+    if (onUrgentAlertChange) {
+      if (urgentNotification) {
+        onUrgentAlertChange({
+          title: urgentNotification.title,
+          message: urgentNotification.message,
+          actionText: urgentNotification.actionText,
+          onAction: urgentNotification.onAction
+        });
+      } else {
+        onUrgentAlertChange(null);
+      }
+    }
+  }, [urgentNotification, onUrgentAlertChange]);
+
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case 'urgent':
+        return <AlertCircle size={15} />;
+      case 'role_change':
+        return <UserCheck size={15} />;
+      case 'announcement':
+        return <Megaphone size={15} />;
+      case 'task':
+        return <CheckSquare size={15} />;
+      case 'security':
+        return <ShieldCheck size={15} />;
+      case 'attendance':
+      case 'info':
+      default:
+        return <Clock size={15} />;
+    }
+  };
+
+  const getIconBackground = (type: string) => {
+    switch (type) {
+      case 'urgent':
+        return 'var(--shiftpe-coral)';
+      case 'role_change':
+        return 'rgba(168, 85, 247, 0.15)';
+      case 'announcement':
+        return 'rgba(245, 158, 11, 0.15)';
+      case 'task':
+        return 'rgba(16, 185, 129, 0.15)';
+      case 'security':
+        return 'rgba(59, 130, 246, 0.15)';
+      case 'attendance':
+      case 'info':
+      default:
+        return 'rgba(100, 116, 139, 0.15)';
+    }
+  };
+
+  const getIconColor = (type: string) => {
+    switch (type) {
+      case 'urgent':
+        return '#ffffff';
+      case 'role_change':
+        return '#c084fc';
+      case 'announcement':
+        return '#f59e0b';
+      case 'task':
+        return 'var(--accent-green)';
+      case 'security':
+        return 'var(--accent-blue)';
+      case 'attendance':
+      case 'info':
+      default:
+        return 'var(--muted)';
+    }
+  };
 
   return (
     <div style={{ position: 'relative' }} ref={panelRef}>
       {/* Bell Trigger Button */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          setIsOpen(!isOpen);
+          if (!isOpen) fetchServerNotifications();
+        }}
         title="Notifications"
         aria-label="Notifications"
         style={{
@@ -155,9 +315,10 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
           borderRadius: 'var(--radius-sm)',
           border: isOpen ? '1px solid var(--shiftpe-coral)' : '1px solid var(--line)',
           backgroundColor: isOpen ? 'var(--shiftpe-coral-light)' : 'var(--surface-subtle)',
-          color: hasUrgent ? 'var(--shiftpe-coral)' : 'var(--muted)',
+          color: unreadCount > 0 ? 'var(--shiftpe-coral)' : 'var(--muted)',
           position: 'relative',
-          transition: 'var(--transition)'
+          transition: 'var(--transition)',
+          cursor: 'pointer'
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.borderColor = 'var(--shiftpe-coral)';
@@ -166,7 +327,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
         onMouseLeave={(e) => {
           if (!isOpen) {
             e.currentTarget.style.borderColor = 'var(--line)';
-            e.currentTarget.style.color = hasUrgent ? 'var(--shiftpe-coral)' : 'var(--muted)';
+            e.currentTarget.style.color = unreadCount > 0 ? 'var(--shiftpe-coral)' : 'var(--muted)';
           }
         }}
       >
@@ -206,7 +367,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
             position: 'absolute',
             top: 'calc(100% + 8px)',
             right: 0,
-            width: '380px',
+            width: '390px',
             backgroundColor: 'var(--panel)',
             border: '1px solid var(--line)',
             borderRadius: 'var(--radius-md)',
@@ -216,17 +377,10 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
             animation: 'slideDown 0.18s cubic-bezier(0.16, 1, 0.3, 1)'
           }}
         >
-          <style>{`
-            @keyframes slideDown {
-              from { opacity: 0; transform: translateY(-6px); }
-              to { opacity: 1; transform: translateY(0); }
-            }
-          `}</style>
-
           {/* Panel Header */}
           <div
             style={{
-              padding: '14px 18px',
+              padding: '12px 16px',
               borderBottom: '1px solid var(--line)',
               display: 'flex',
               alignItems: 'center',
@@ -237,14 +391,14 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Bell size={15} color="var(--shiftpe-coral)" />
               <span style={{ fontWeight: 700, fontSize: '13.5px', color: 'var(--text)' }}>
-                Notifications
+                Notifications & Alerts
               </span>
               {unreadCount > 0 && (
                 <span
                   style={{
-                    fontSize: '11px',
+                    fontSize: '10.5px',
                     fontWeight: 700,
-                    padding: '2px 7px',
+                    padding: '1px 6px',
                     borderRadius: 'var(--radius-full)',
                     backgroundColor: 'var(--shiftpe-coral-light)',
                     color: 'var(--shiftpe-coral)'
@@ -255,21 +409,48 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
               )}
             </div>
 
-            {unreadCount > 0 && (
-              <button
-                onClick={markAllRead}
-                style={{
-                  fontSize: '11.5px',
-                  color: 'var(--muted)',
-                  fontWeight: 600,
-                  transition: 'color 0.15s ease'
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--shiftpe-coral)')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--muted)')}
-              >
-                Mark all read
-              </button>
-            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {isCeo && (
+                <button
+                  onClick={() => setIsBroadcastOpen(true)}
+                  title="Broadcast alert to all teammates"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '4px 8px',
+                    borderRadius: 'var(--radius-sm)',
+                    backgroundColor: 'var(--shiftpe-coral-light)',
+                    border: '1px solid var(--shiftpe-coral-border)',
+                    color: 'var(--shiftpe-coral)',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Megaphone size={12} />
+                  <span>Alert</span>
+                </button>
+              )}
+
+              {unreadCount > 0 && (
+                <button
+                  onClick={markAllRead}
+                  style={{
+                    fontSize: '11px',
+                    color: 'var(--muted)',
+                    fontWeight: 600,
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer'
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--shiftpe-coral)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--muted)')}
+                >
+                  Mark all read
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Notifications List */}
@@ -284,13 +465,13 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
               </div>
             ) : (
               notifications.map((item) => {
-                const isUrgent = item.type === 'urgent';
+                const isUrgent = item.type === 'urgent' || item.priority === 'high';
                 return (
                   <div
                     key={item.id}
                     onClick={item.onAction}
                     style={{
-                      padding: '14px 18px',
+                      padding: '12px 16px',
                       borderBottom: '1px solid var(--line)',
                       backgroundColor: item.read
                         ? 'transparent'
@@ -319,37 +500,20 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
                     {/* Status Icon */}
                     <div
                       style={{
-                        width: '32px',
-                        height: '32px',
+                        width: '30px',
+                        height: '30px',
                         borderRadius: '50%',
-                        backgroundColor:
-                          item.type === 'urgent'
-                            ? 'var(--shiftpe-coral)'
-                            : item.type === 'task'
-                            ? 'rgba(16, 185, 129, 0.15)'
-                            : item.type === 'security'
-                            ? 'rgba(59, 130, 246, 0.15)'
-                            : 'rgba(245, 158, 11, 0.15)',
-                        color:
-                          item.type === 'urgent'
-                            ? '#ffffff'
-                            : item.type === 'task'
-                            ? 'var(--accent-green)'
-                            : item.type === 'security'
-                            ? 'var(--accent-blue)'
-                            : 'var(--accent-amber)',
+                        backgroundColor: getIconBackground(item.type),
+                        color: getIconColor(item.type),
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         flexShrink: 0,
                         marginTop: '2px',
-                        boxShadow: item.type === 'urgent' ? '0 2px 8px var(--shiftpe-coral-glow)' : 'none'
+                        boxShadow: isUrgent ? '0 2px 8px var(--shiftpe-coral-glow)' : 'none'
                       }}
                     >
-                      {item.type === 'urgent' && <AlertCircle size={16} />}
-                      {item.type === 'task' && <CheckSquare size={16} />}
-                      {item.type === 'security' && <ShieldCheck size={16} />}
-                      {item.type === 'info' && <Clock size={16} />}
+                      {getNotificationIcon(item.type)}
                     </div>
 
                     {/* Content */}
@@ -391,7 +555,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
                           fontSize: '11.5px',
                           color: 'var(--muted)',
                           lineHeight: 1.45,
-                          marginBottom: item.actionText ? '8px' : 0
+                          marginBottom: item.actionText ? '6px' : 0
                         }}
                       >
                         {item.message}
@@ -403,14 +567,14 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
                             display: 'inline-flex',
                             alignItems: 'center',
                             gap: '4px',
-                            fontSize: '11.5px',
+                            fontSize: '11px',
                             fontWeight: 700,
                             color: isUrgent ? 'var(--shiftpe-coral)' : 'var(--accent-green)',
                             marginTop: '2px'
                           }}
                         >
                           <span>{item.actionText}</span>
-                          <ExternalLink size={11} />
+                          <ExternalLink size={10} />
                         </div>
                       )}
                     </div>
@@ -426,7 +590,9 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
                           padding: '2px',
                           alignSelf: 'flex-start',
                           borderRadius: '4px',
-                          transition: 'color 0.15s ease'
+                          background: 'transparent',
+                          border: 'none',
+                          cursor: 'pointer'
                         }}
                         onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text)')}
                         onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--subtle)')}
@@ -443,7 +609,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
           {/* Panel Footer */}
           <div
             style={{
-              padding: '10px 18px',
+              padding: '10px 16px',
               backgroundColor: 'var(--surface-subtle)',
               borderTop: '1px solid var(--line)',
               display: 'flex',
@@ -454,9 +620,18 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
             }}
           >
             <span>ShiftPe Portal v1.2</span>
-            <span>Real-time notifications</span>
+            <span>Real-time notifications active</span>
           </div>
         </div>
+      )}
+
+      {/* CEO Broadcast Alert Modal */}
+      {isCeo && (
+        <BroadcastAlertModal
+          isOpen={isBroadcastOpen}
+          onClose={() => setIsBroadcastOpen(false)}
+          onSuccess={() => fetchServerNotifications()}
+        />
       )}
     </div>
   );

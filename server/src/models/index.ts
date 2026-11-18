@@ -9,3 +9,4 @@ export * from './AuditLog.js';
 export * from './Announcement.js';
 export * from './DirectoryAccess.js';
 export * from './WikiArticle.js';
+export * from './Notification.js';

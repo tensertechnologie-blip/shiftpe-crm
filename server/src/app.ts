@@ -15,6 +15,7 @@ import auditRoutes from './routes/auditRoutes.js';
 import announcementRoutes from './routes/announcementRoutes.js';
 import directoryRoutes from './routes/directoryRoutes.js';
 import wikiRoutes from './routes/wikiRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
 import { apiLimiter } from './middleware/rateLimiter.js';
 
 export function createApp(): Express {
@@ -59,6 +60,7 @@ export function createApp(): Express {
   app.use('/api/announcements', announcementRoutes);
   app.use('/api/access/directory', directoryRoutes);
   app.use('/api/wiki', wikiRoutes);
+  app.use('/api/notifications', notificationRoutes);
 
   // Serve Static Client in Production if client/dist exists
   const clientDistPath = path.resolve(process.cwd(), 'client/dist');

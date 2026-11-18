@@ -38,6 +38,7 @@ interface TopNavbarProps {
   onSelectTab: (tab: NavTab) => void;
   onOpenInvite?: () => void;
   onOpenOnboarding?: () => void;
+  onUrgentAlertChange?: (alert: any) => void;
 }
 
 interface AppItem {
@@ -61,7 +62,8 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
   activeTab,
   onSelectTab,
   onOpenInvite,
-  onOpenOnboarding
+  onOpenOnboarding,
+  onUrgentAlertChange
 }) => {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
@@ -559,6 +561,7 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
           <NotificationPanel
             onOpenOnboarding={onOpenOnboarding || (() => {})}
             onSelectTab={handleSelectApp}
+            onUrgentAlertChange={onUrgentAlertChange}
           />
 
           {/* Theme Switcher */}

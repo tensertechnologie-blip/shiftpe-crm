@@ -5,7 +5,7 @@ import { AuthenticatedRequest } from '../middleware/auth.js';
 export async function logAuditEvent(
   req: AuthenticatedRequest,
   action: string,
-  targetType: 'Attendance' | 'WorkLog' | 'Salary' | 'User',
+  targetType: 'Attendance' | 'WorkLog' | 'Salary' | 'User' | 'Announcement' | 'Directory' | 'Wiki' | 'Notification',
   targetId?: string,
   details: Record<string, any> = {}
 ): Promise<void> {

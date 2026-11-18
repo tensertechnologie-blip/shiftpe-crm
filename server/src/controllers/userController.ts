@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import { z } from 'zod';
 import { User, IUser } from '../models/User.js';
 import { Domain } from '../models/Domain.js';
+import { Notification } from '../models/Notification.js';
 import { AuthenticatedRequest } from '../middleware/auth.js';
 import { escapeRegex } from '../utils/escapeRegex.js';
 import { logAuditEvent } from '../utils/audit.js';
@@ -225,6 +226,25 @@ export async function updateUser(req: AuthenticatedRequest, res: Response): Prom
         previousStatus,
         newStatus: targetUser.status
       });
+
+      // Dispatch real-time notification to the user if role changed
+      if (role !== undefined && role !== previousRole) {
+        try {
+          await Notification.create({
+            title: 'Organizational Role Updated',
+            message: `Your account role was officially updated to ${targetUser.role.toUpperCase()} (${targetUser.role === 'ceo' ? 'Executive Administrator' : targetUser.role === 'manager' ? 'Department Lead' : 'Standard Teammate'}) by Executive Administration.`,
+            type: 'role_change',
+            priority: 'high',
+            sender: req.user?.userId ? new mongoose.Types.ObjectId(req.user.userId) : null,
+            senderName: req.user?.email || 'Executive Administration',
+            recipient: targetUser._id,
+            actionText: 'View in Team Directory',
+            actionLink: '#/people'
+          });
+        } catch (notifErr) {
+          console.warn('Failed to dispatch role change notification:', notifErr);
+        }
+      }
     }
 
     const updated = await User.findById(id).populate('reportsTo', 'name email designation domain');

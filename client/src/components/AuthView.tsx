@@ -139,10 +139,10 @@ export const AuthView: React.FC = () => {
   const fillQuickCredentials = (role: 'ceo' | 'member') => {
     if (role === 'ceo') {
       setEmail('ajay.founder@shiftpe.in');
-      setPassword('ShiftPeCeo2026!');
+      setPassword('Sar@98112002');
     } else {
-      setEmail('sample.alex@shiftpe.com');
-      setPassword('ShiftPeSample2026!');
+      setEmail('shubham.yambadwar@shiftpe.in');
+      setPassword('Shu@73192026');
     }
     setErrorMessage('');
   };

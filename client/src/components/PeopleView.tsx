@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { User } from '../types';
+import { useToast } from '../context/ToastContext';
+import { User, UserRole } from '../types';
 import {
   Users,
   Search,
@@ -33,6 +34,7 @@ type SortOrder = 'asc' | 'desc';
 
 export const PeopleView: React.FC = () => {
   const { user: currentUser, token, updateUserState, refreshUser } = useAuth();
+  const { showToast } = useToast();
   const [users, setUsers] = useState<User[]>([]);
   const domains = ['All', 'Engineering', 'Design', 'Marketing', 'Operations', 'Sales', 'Executive'];
   const [selectedDomain, setSelectedDomain] = useState('All');
@@ -59,7 +61,7 @@ export const PeopleView: React.FC = () => {
   // Edit states
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState('');
-  const [editRole, setEditRole] = useState<'ceo' | 'member'>('member');
+  const [editRole, setEditRole] = useState<UserRole>('member');
   const [editPhone, setEditPhone] = useState('');
   const [editSkills, setEditSkills] = useState('');
   const [editDesignation, setEditDesignation] = useState('');
@@ -143,7 +145,7 @@ export const PeopleView: React.FC = () => {
         const data = await res.json();
         setProfileData(data);
         setEditName(data.user.name || '');
-        setEditRole((data.user.role as 'ceo' | 'member') || 'member');
+        setEditRole((data.user.role as UserRole) || 'member');
         setEditPhone(data.user.phone || '');
         setEditSkills((data.user.skills || []).join(', '));
         setEditDesignation(data.user.designation || '');
@@ -223,6 +225,11 @@ export const PeopleView: React.FC = () => {
       }
 
       setSuccessMessage('Profile updated successfully!');
+      showToast({
+        type: 'success',
+        title: 'Profile Updated',
+        message: 'Changes saved and reflected across the organization.'
+      });
       setIsEditing(false);
       loadProfile(selectedProfileId);
       fetchUsers();
@@ -237,6 +244,51 @@ export const PeopleView: React.FC = () => {
       }
     } catch (err: any) {
       setErrorMessage(err.message);
+      showToast({
+        type: 'error',
+        title: 'Update Failed',
+        message: err.message
+      });
+    }
+  };
+
+  const handleQuickRoleChange = async (targetUserId: string, newRole: UserRole) => {
+    try {
+      const res = await fetch(`/api/users/${targetUserId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        credentials: 'include',
+        body: JSON.stringify({ role: newRole })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to update role');
+      }
+
+      showToast({
+        type: 'success',
+        title: 'Role Assigned',
+        message: `Successfully changed role to ${newRole.toUpperCase()}.`
+      });
+
+      if (profileData && profileData.user._id === targetUserId) {
+        setProfileData({
+          ...profileData,
+          user: { ...profileData.user, role: newRole }
+        });
+        setEditRole(newRole);
+      }
+      fetchUsers();
+    } catch (err: any) {
+      showToast({
+        type: 'error',
+        title: 'Role Update Failed',
+        message: err.message || 'Error updating role'
+      });
     }
   };
 
@@ -407,7 +459,7 @@ export const PeopleView: React.FC = () => {
                       width: '42px',
                       height: '42px',
                       borderRadius: '50%',
-                      backgroundColor: u.role === 'ceo' ? 'var(--accent-purple)' : 'var(--accent-blue)',
+                      backgroundColor: u.role === 'ceo' ? 'var(--accent-purple)' : u.role === 'manager' ? 'var(--shiftpe-coral)' : 'var(--accent-blue)',
                       color: '#ffffff',
                       fontWeight: 800,
                       fontSize: '16px',
@@ -435,8 +487,9 @@ export const PeopleView: React.FC = () => {
                     letterSpacing: '0.5px',
                     padding: '2px 8px',
                     borderRadius: 'var(--radius-full)',
-                    backgroundColor: u.role === 'ceo' ? 'rgba(180, 0, 255, 0.15)' : 'rgba(59, 123, 245, 0.15)',
-                    color: u.role === 'ceo' ? '#d47aff' : '#72a4ff'
+                    backgroundColor: u.role === 'ceo' ? 'rgba(180, 0, 255, 0.15)' : u.role === 'manager' ? 'var(--shiftpe-coral-light)' : 'rgba(59, 123, 245, 0.15)',
+                    color: u.role === 'ceo' ? '#d47aff' : u.role === 'manager' ? 'var(--shiftpe-coral)' : '#72a4ff',
+                    border: u.role === 'ceo' ? '1px solid rgba(180, 0, 255, 0.3)' : u.role === 'manager' ? '1px solid var(--shiftpe-coral-border)' : '1px solid rgba(59, 123, 245, 0.3)'
                   }}>
                     {u.role}
                   </span>
@@ -967,10 +1020,11 @@ export const PeopleView: React.FC = () => {
                       <select
                         id="edit-role"
                         value={editRole}
-                        onChange={(e) => setEditRole(e.target.value as any)}
+                        onChange={(e) => setEditRole(e.target.value as UserRole)}
                         style={{ width: '100%', padding: '9px 12px', backgroundColor: 'var(--bg)', border: '1px solid var(--line)', borderRadius: 'var(--radius-sm)', fontSize: '13px' }}
                       >
                         <option value="ceo">CEO (Executive Administrator)</option>
+                        <option value="manager">Manager (Department Lead)</option>
                         <option value="member">Member (Standard Teammate)</option>
                       </select>
                     </div>
@@ -1007,6 +1061,53 @@ export const PeopleView: React.FC = () => {
               </div>
             ) : (
               <div>
+                {/* CEO Quick Role Assignment */}
+                {currentUser?.role === 'ceo' && (
+                  <div
+                    style={{
+                      padding: '10px 14px',
+                      borderRadius: 'var(--radius-sm)',
+                      backgroundColor: 'var(--surface-subtle)',
+                      border: '1px solid var(--shiftpe-coral-border)',
+                      marginBottom: '18px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '12px',
+                      flexWrap: 'wrap'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Shield size={15} color="var(--shiftpe-coral)" />
+                      <span style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--text)' }}>
+                        CEO Role Assignment:
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <select
+                        aria-label="Assign Role"
+                        value={profileData.user.role}
+                        onChange={(e) => handleQuickRoleChange(profileData.user._id, e.target.value as UserRole)}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: 'var(--radius-sm)',
+                          backgroundColor: 'var(--panel)',
+                          border: '1px solid var(--shiftpe-coral-border)',
+                          color: 'var(--shiftpe-coral)',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <option value="ceo">CEO (Executive Administrator)</option>
+                        <option value="manager">Manager (Department Lead)</option>
+                        <option value="member">Member (Standard Teammate)</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+
                 {/* Contact & Info Grid */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '24px' }} className="modal-grid-2">
                   <div style={{ padding: '12px 16px', backgroundColor: 'var(--bg)', borderRadius: 'var(--radius-md)', border: '1px solid var(--line)' }}>

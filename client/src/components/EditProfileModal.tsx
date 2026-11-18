@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
+import { UserRole } from '../types';
 import { X, Check, AlertCircle } from 'lucide-react';
 
 interface EditProfileModalProps {
@@ -14,13 +16,14 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   onSuccess
 }) => {
   const { user, token, updateUserState, refreshUser } = useAuth();
+  const { showToast } = useToast();
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [skills, setSkills] = useState('');
   const [designation, setDesignation] = useState('');
   const [domain, setDomain] = useState('');
-  const [role, setRole] = useState<'ceo' | 'member'>('member');
+  const [role, setRole] = useState<UserRole>('member');
   const [reportsTo, setReportsTo] = useState<string>('');
   const [teammates, setTeammates] = useState<Array<{ _id: string; name: string; designation: string; domain: string }>>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -136,6 +139,11 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
       }
 
       setSuccessMessage('Profile updated successfully!');
+      showToast({
+        type: 'success',
+        title: 'Profile Updated',
+        message: 'Your profile changes have been saved.'
+      });
       if (data.user) {
         updateUserState(data.user);
       }
@@ -433,7 +441,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
               <select
                 id="profile-role"
                 value={role}
-                onChange={(e) => setRole(e.target.value as any)}
+                onChange={(e) => setRole(e.target.value as UserRole)}
                 style={{
                   width: '100%',
                   padding: '10px 14px',
@@ -445,6 +453,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                 }}
               >
                 <option value="ceo">CEO (Executive Administrator)</option>
+                <option value="manager">Manager (Department Lead)</option>
                 <option value="member">Member (Standard Teammate)</option>
               </select>
             </div>

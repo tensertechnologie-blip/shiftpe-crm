@@ -37,20 +37,9 @@ export async function isEmailWhitelisted(email: string): Promise<boolean> {
     return true;
   }
 
-  // Sample & test accounts for sandbox/local dev/test verification
+  // Test accounts for sandbox/local dev/test verification
   if (process.env.NODE_ENV !== 'production') {
     if (normalized.startsWith('test.') && /@shiftpe\.(com|in)$/i.test(normalized)) {
-      return true;
-    }
-
-    const devSampleEmails = [
-      'sample.alex@shiftpe.com',
-      'sample.priya@shiftpe.com',
-      'sample.rahul@shiftpe.com',
-      'sample.neha@shiftpe.com',
-      'sample.david@shiftpe.com'
-    ];
-    if (devSampleEmails.includes(normalized)) {
       return true;
     }
   }

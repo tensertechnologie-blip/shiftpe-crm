@@ -6,7 +6,7 @@ export interface IAuditLog extends Document {
   actorRole: string;
   action: string;
   targetId?: string;
-  targetType: 'Attendance' | 'WorkLog' | 'Salary' | 'User' | 'Announcement' | 'Directory' | 'Wiki';
+  targetType: 'Attendance' | 'WorkLog' | 'Salary' | 'User' | 'Announcement' | 'Directory' | 'Wiki' | 'Notification';
   details: Record<string, any>;
   ipAddress?: string;
   createdAt: Date;
@@ -21,7 +21,7 @@ const auditLogSchema = new Schema<IAuditLog>(
     targetId: { type: String, index: true },
     targetType: {
       type: String,
-      enum: ['Attendance', 'WorkLog', 'Salary', 'User', 'Announcement', 'Directory', 'Wiki'],
+      enum: ['Attendance', 'WorkLog', 'Salary', 'User', 'Announcement', 'Directory', 'Wiki', 'Notification'],
       required: true
     },
     details: { type: Schema.Types.Mixed, default: {} },
