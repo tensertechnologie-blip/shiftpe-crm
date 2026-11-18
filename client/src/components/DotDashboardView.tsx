@@ -43,7 +43,7 @@ export const DotDashboardView: React.FC<DotDashboardViewProps> = ({
 }) => {
   const { user, token } = useAuth();
   const firstName = user?.name ? user.name.split(' ')[0] : 'Teammate';
-  const isCeo = user?.role === 'ceo';
+  const isCeo = user?.role === 'ceo' || user?.role === 'founder';
 
   // Time-aware greeting
   const getGreeting = () => {

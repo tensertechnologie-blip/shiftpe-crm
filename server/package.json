@@ -8,6 +8,7 @@
     "start": "node dist/index.js",
     "dev": "tsx watch src/index.ts",
     "seed": "tsx src/scripts/seed.ts",
+    "setup:corporate": "tsx src/scripts/setupCorporateAccounts.ts",
     "test": "jest --runInBand --detectOpenHandles"
   },
   "dependencies": {

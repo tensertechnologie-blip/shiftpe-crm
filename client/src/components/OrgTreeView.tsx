@@ -8,7 +8,7 @@ interface OrgMember {
   email: string;
   designation: string;
   domain: string;
-  role: 'member' | 'manager' | 'ceo';
+  role: 'member' | 'manager' | 'ceo' | 'founder';
   reportsTo: string | null;
   phone?: string;
   children?: OrgMember[];
@@ -45,6 +45,11 @@ export const OrgTreeView: React.FC = () => {
             }
           });
 
+          roots.sort((a, b) => {
+            const roleScore = (r: string) => r === 'founder' ? 3 : r === 'ceo' ? 2 : r === 'manager' ? 1 : 0;
+            return roleScore(b.role) - roleScore(a.role);
+          });
+
           setTreeRoots(roots);
         }
       } catch (err) {
@@ -58,6 +63,7 @@ export const OrgTreeView: React.FC = () => {
   }, [token]);
 
   const renderNode = (node: OrgMember, depth = 0) => {
+    const isExecutive = node.role === 'ceo' || node.role === 'founder';
     return (
       <div key={node._id} style={{ marginLeft: depth > 0 ? '28px' : '0px', marginTop: '12px' }}>
         <div style={{
@@ -65,9 +71,9 @@ export const OrgTreeView: React.FC = () => {
           alignItems: 'center',
           gap: '12px',
           padding: '12px 18px',
-          backgroundColor: node.role === 'ceo' ? '#18122c' : 'var(--panel)',
+          backgroundColor: node.role === 'founder' ? 'rgba(255, 95, 85, 0.08)' : node.role === 'ceo' ? '#18122c' : 'var(--panel)',
           border: '1px solid',
-          borderColor: node.role === 'ceo' ? 'var(--accent-purple)' : 'var(--line)',
+          borderColor: node.role === 'founder' ? 'var(--shiftpe-coral-border)' : node.role === 'ceo' ? 'var(--accent-purple)' : 'var(--line)',
           borderRadius: 'var(--radius-md)',
           boxShadow: '0 4px 14px rgba(0,0,0,0.25)',
           minWidth: '280px'
@@ -76,7 +82,7 @@ export const OrgTreeView: React.FC = () => {
             width: '36px',
             height: '36px',
             borderRadius: '50%',
-            backgroundColor: node.role === 'ceo' ? 'var(--accent-purple)' : node.role === 'manager' ? 'var(--shiftpe-coral)' : 'var(--accent-blue)',
+            backgroundColor: node.role === 'founder' ? 'var(--shiftpe-coral)' : node.role === 'ceo' ? 'var(--accent-purple)' : node.role === 'manager' ? '#38bdf8' : 'var(--accent-blue)',
             color: '#fff',
             fontWeight: 700,
             display: 'flex',
@@ -92,7 +98,7 @@ export const OrgTreeView: React.FC = () => {
               <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text)' }}>
                 {node.name}
               </span>
-              {node.role === 'ceo' && <Shield size={14} color="var(--accent-green)" />}
+              {isExecutive && <Shield size={14} color="var(--shiftpe-coral)" />}
             </div>
             <div style={{ fontSize: '12px', color: 'var(--muted)' }}>
               {node.designation} &bull; <span style={{ color: 'var(--shiftpe-coral)' }}>{node.domain}</span>

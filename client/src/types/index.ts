@@ -1,4 +1,4 @@
-export type UserRole = 'member' | 'manager' | 'ceo';
+export type UserRole = 'member' | 'manager' | 'ceo' | 'founder';
 
 export interface User {
   _id: string;
@@ -15,6 +15,14 @@ export interface User {
   } | string | null;
   skills: string[];
   phone: string;
+  bio?: string;
+  location?: string;
+  workMode?: 'office' | 'hybrid' | 'remote';
+  linkedin?: string;
+  github?: string;
+  workingHours?: string;
+  emergencyContact?: string;
+  avatarColor?: string;
   joinDate: string;
   status: 'active' | 'inactive';
   totpEnabled: boolean;

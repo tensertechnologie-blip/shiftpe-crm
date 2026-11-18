@@ -10,13 +10,21 @@ import { logAuditEvent } from '../utils/audit.js';
 
 const updateUserSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(60, 'Name must be at most 60 characters').optional(),
-  phone: z.string().max(20, 'Phone must be at most 20 characters').optional(),
-  skills: z.array(z.string()).max(30, 'Skills must contain at most 30 items').optional(),
+  phone: z.string().max(25, 'Phone must be at most 25 characters').optional(),
+  skills: z.array(z.string()).max(50, 'Skills must contain at most 50 items').optional(),
   designation: z.string().optional(),
   domain: z.string().optional(),
   reportsTo: z.string().nullable().optional(),
   status: z.enum(['active', 'inactive']).optional(),
-  role: z.enum(['member', 'manager', 'ceo']).optional()
+  role: z.enum(['member', 'manager', 'ceo', 'founder']).optional(),
+  bio: z.string().max(500, 'Bio must be at most 500 characters').optional(),
+  location: z.string().max(100).optional(),
+  workMode: z.enum(['office', 'hybrid', 'remote']).optional(),
+  linkedin: z.string().optional(),
+  github: z.string().optional(),
+  workingHours: z.string().max(60).optional(),
+  emergencyContact: z.string().max(40).optional(),
+  avatarColor: z.string().max(30).optional()
 });
 
 // Helper: Detect circular reporting chain
@@ -142,10 +150,10 @@ export async function updateUser(req: AuthenticatedRequest, res: Response): Prom
       return;
     }
 
-    const isCeo = req.user?.role === 'ceo';
+    const isExecutiveAdmin = req.user?.role === 'ceo' || req.user?.role === 'founder';
     const isSelf = req.user?.userId === id;
 
-    if (!isCeo && !isSelf) {
+    if (!isExecutiveAdmin && !isSelf) {
       res.status(403).json({ error: 'Forbidden: You can only edit your own profile' });
       return;
     }
@@ -156,30 +164,57 @@ export async function updateUser(req: AuthenticatedRequest, res: Response): Prom
       return;
     }
 
-    const { name, phone, skills, designation, domain, reportsTo, status, role } = parseResult.data;
+    const {
+      name,
+      phone,
+      skills,
+      designation,
+      domain,
+      reportsTo,
+      status,
+      role,
+      bio,
+      location,
+      workMode,
+      linkedin,
+      github,
+      workingHours,
+      emergencyContact,
+      avatarColor
+    } = parseResult.data;
 
-    // Refuse to demote or deactivate the last remaining CEO
-    if (targetUser.role === 'ceo') {
-      const isDemoting = role !== undefined && role !== 'ceo';
-      const isDeactivating = status !== undefined && status === 'inactive';
-      if (isDemoting || isDeactivating) {
-        const activeCeoCount = await User.countDocuments({ role: 'ceo', status: 'active' });
-        if (activeCeoCount <= 1) {
-          res.status(400).json({ error: 'Cannot demote or deactivate the last remaining CEO.' });
-          return;
-        }
+    // Strict constraint: There can only be AT MOST ONE CEO in the organization
+    if (role === 'ceo' && targetUser.role !== 'ceo') {
+      const existingCeo = await User.findOne({
+        role: 'ceo',
+        status: 'active',
+        _id: { $ne: new mongoose.Types.ObjectId(id) }
+      });
+      if (existingCeo) {
+        res.status(400).json({
+          error: `There can only be one CEO in the organization. Current CEO is ${existingCeo.name}. Please reassign or demote the existing CEO first.`
+        });
+        return;
       }
     }
 
     const previousRole = targetUser.role;
     const previousStatus = targetUser.status;
 
-    // Both CEO and self can update profile details: name, phone, skills, designation, domain, and reportsTo
+    // Both executive admins and teammates editing themselves can update rich profile details:
     if (name !== undefined) targetUser.name = name.trim();
     if (phone !== undefined) targetUser.phone = phone.trim();
     if (skills !== undefined && Array.isArray(skills)) targetUser.skills = skills;
     if (designation !== undefined) targetUser.designation = designation.trim();
     if (domain !== undefined) targetUser.domain = domain.trim();
+    if (bio !== undefined) targetUser.bio = bio.trim();
+    if (location !== undefined) targetUser.location = location.trim();
+    if (workMode !== undefined) targetUser.workMode = workMode;
+    if (linkedin !== undefined) targetUser.linkedin = linkedin.trim();
+    if (github !== undefined) targetUser.github = github.trim();
+    if (workingHours !== undefined) targetUser.workingHours = workingHours.trim();
+    if (emergencyContact !== undefined) targetUser.emergencyContact = emergencyContact.trim();
+    if (avatarColor !== undefined) targetUser.avatarColor = avatarColor.trim();
 
     if (reportsTo !== undefined) {
       if (reportsTo === null || reportsTo === '' || reportsTo === 'none') {
@@ -210,8 +245,8 @@ export async function updateUser(req: AuthenticatedRequest, res: Response): Prom
       }
     }
 
-    // Only CEO can update account status and security role
-    if (isCeo) {
+    // Only Executive Admins (Founders or CEO) can update account status and security role
+    if (isExecutiveAdmin) {
       if (status !== undefined) targetUser.status = status;
       if (role !== undefined) targetUser.role = role;
     }
@@ -230,9 +265,16 @@ export async function updateUser(req: AuthenticatedRequest, res: Response): Prom
       // Dispatch real-time notification to the user if role changed
       if (role !== undefined && role !== previousRole) {
         try {
+          const roleDisplay = targetUser.role === 'founder'
+            ? 'Founder'
+            : targetUser.role === 'ceo'
+            ? 'Chief Executive Officer'
+            : targetUser.role === 'manager'
+            ? 'Department Lead / Manager'
+            : 'Standard Teammate';
           await Notification.create({
             title: 'Organizational Role Updated',
-            message: `Your account role was officially updated to ${targetUser.role.toUpperCase()} (${targetUser.role === 'ceo' ? 'Executive Administrator' : targetUser.role === 'manager' ? 'Department Lead' : 'Standard Teammate'}) by Executive Administration.`,
+            message: `Your account role was officially updated to ${targetUser.role.toUpperCase()} (${roleDisplay}) by Executive Administration.`,
             type: 'role_change',
             priority: 'high',
             sender: req.user?.userId ? new mongoose.Types.ObjectId(req.user.userId) : null,
@@ -262,7 +304,7 @@ export async function updateUser(req: AuthenticatedRequest, res: Response): Prom
 export async function getOrgTree(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
     const users = await User.find({ status: 'active' })
-      .select('name email designation domain role reportsTo phone')
+      .select('name email designation domain role reportsTo phone bio location workMode avatarColor')
       .lean();
 
     res.status(200).json({ users });

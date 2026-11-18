@@ -77,8 +77,9 @@ export const App: React.FC = () => {
   useEffect(() => {
     const syncTabFromHash = () => {
       const tab = hashToTab(window.location.hash);
-      // Admin tabs are visible only to the CEO
-      if ((tab === 'Approvals' || tab === 'CRM Access' || tab === 'Audit Log') && user?.role !== 'ceo') {
+      // Admin tabs are visible to executive admins (Founders & CEO)
+      const isExecutive = user?.role === 'ceo' || user?.role === 'founder';
+      if ((tab === 'Approvals' || tab === 'CRM Access' || tab === 'Audit Log') && !isExecutive) {
         window.location.hash = '#/home';
         setActiveTab('Home');
       } else {

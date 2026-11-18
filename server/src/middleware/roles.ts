@@ -20,11 +20,11 @@ export function requireRole(...allowedRoles: UserRole[]) {
   };
 }
 
-export const requireCEO = requireRole('ceo');
-export const requireApprover = requireRole('ceo', 'manager');
+export const requireCEO = requireRole('ceo', 'founder');
+export const requireApprover = requireRole('ceo', 'founder', 'manager');
 
 export function isExecutive(user?: { role?: string; email?: string } | null): boolean {
-  return user?.role === 'ceo';
+  return user?.role === 'ceo' || user?.role === 'founder';
 }
 
 export function requireExecutive(req: AuthenticatedRequest, res: Response, next: NextFunction): void {

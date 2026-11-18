@@ -20,7 +20,13 @@ import {
   ArrowUp,
   ArrowDown,
   Shield,
-  ChevronLeft
+  ChevronLeft,
+  MapPin,
+  Clock,
+  Linkedin,
+  Github,
+  Globe,
+  Sparkles
 } from 'lucide-react';
 
 interface ProfileData {
@@ -31,6 +37,59 @@ interface ProfileData {
 
 type SortColumn = 'name' | 'designation' | 'domain' | 'status';
 type SortOrder = 'asc' | 'desc';
+
+// Helper to determine if a teammate is Co-Founder
+const isCoFounder = (u: { name?: string; designation?: string }) => {
+  const d = (u.designation || '').toLowerCase();
+  const n = (u.name || '').toLowerCase();
+  return d.includes('co-founder') || n.includes('ritesh');
+};
+
+const getRoleDisplay = (u: { role: UserRole; name?: string; designation?: string }) => {
+  if (u.role === 'founder') {
+    return isCoFounder(u) ? 'CO-FOUNDER' : 'FOUNDER';
+  }
+  if (u.role === 'ceo') return 'CEO';
+  if (u.role === 'manager') return 'MANAGER';
+  return 'MEMBER';
+};
+
+const getRoleBadgeStyle = (role: UserRole) => {
+  if (role === 'founder') {
+    return {
+      backgroundColor: 'rgba(255, 95, 85, 0.15)',
+      color: 'var(--shiftpe-coral)',
+      border: '1px solid var(--shiftpe-coral-border)'
+    };
+  }
+  if (role === 'ceo') {
+    return {
+      backgroundColor: 'rgba(180, 0, 255, 0.15)',
+      color: '#d47aff',
+      border: '1px solid rgba(180, 0, 255, 0.3)'
+    };
+  }
+  if (role === 'manager') {
+    return {
+      backgroundColor: 'rgba(56, 189, 248, 0.15)',
+      color: '#38bdf8',
+      border: '1px solid rgba(56, 189, 248, 0.3)'
+    };
+  }
+  return {
+    backgroundColor: 'rgba(59, 123, 245, 0.15)',
+    color: '#72a4ff',
+    border: '1px solid rgba(59, 123, 245, 0.3)'
+  };
+};
+
+const getAvatarBg = (u: User) => {
+  if (u.avatarColor) return u.avatarColor;
+  if (u.role === 'founder') return 'var(--shiftpe-coral)';
+  if (u.role === 'ceo') return 'var(--accent-purple)';
+  if (u.role === 'manager') return '#38bdf8';
+  return 'var(--accent-blue)';
+};
 
 export const PeopleView: React.FC = () => {
   const { user: currentUser, token, updateUserState, refreshUser } = useAuth();
@@ -189,6 +248,8 @@ export const PeopleView: React.FC = () => {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [selectedProfileId]);
 
+  const isExecutive = currentUser?.role === 'ceo' || currentUser?.role === 'founder';
+
   const handleSaveProfile = async () => {
     if (!selectedProfileId) return;
     setErrorMessage('');
@@ -203,7 +264,7 @@ export const PeopleView: React.FC = () => {
       reportsTo: editReportsTo ? editReportsTo : null
     };
 
-    if (currentUser?.role === 'ceo') {
+    if (isExecutive) {
       payload.status = editStatus;
       payload.role = editRole;
     }
@@ -459,13 +520,14 @@ export const PeopleView: React.FC = () => {
                       width: '42px',
                       height: '42px',
                       borderRadius: '50%',
-                      backgroundColor: u.role === 'ceo' ? 'var(--accent-purple)' : u.role === 'manager' ? 'var(--shiftpe-coral)' : 'var(--accent-blue)',
+                      backgroundColor: getAvatarBg(u),
                       color: '#ffffff',
                       fontWeight: 800,
                       fontSize: '16px',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center'
+                      justifyContent: 'center',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.25)'
                     }}>
                       {u.name.charAt(0).toUpperCase()}
                     </div>
@@ -483,15 +545,12 @@ export const PeopleView: React.FC = () => {
                   <span style={{
                     fontSize: '10.5px',
                     fontWeight: 700,
-                    textTransform: 'uppercase',
                     letterSpacing: '0.5px',
                     padding: '2px 8px',
                     borderRadius: 'var(--radius-full)',
-                    backgroundColor: u.role === 'ceo' ? 'rgba(180, 0, 255, 0.15)' : u.role === 'manager' ? 'var(--shiftpe-coral-light)' : 'rgba(59, 123, 245, 0.15)',
-                    color: u.role === 'ceo' ? '#d47aff' : u.role === 'manager' ? 'var(--shiftpe-coral)' : '#72a4ff',
-                    border: u.role === 'ceo' ? '1px solid rgba(180, 0, 255, 0.3)' : u.role === 'manager' ? '1px solid var(--shiftpe-coral-border)' : '1px solid rgba(59, 123, 245, 0.3)'
+                    ...getRoleBadgeStyle(u.role)
                   }}>
-                    {u.role}
+                    {getRoleDisplay(u)}
                   </span>
                 </div>
 
@@ -676,7 +735,7 @@ export const PeopleView: React.FC = () => {
                             width: '32px',
                             height: '32px',
                             borderRadius: '50%',
-                            backgroundColor: u.role === 'ceo' ? 'var(--accent-purple)' : 'var(--accent-blue)',
+                            backgroundColor: getAvatarBg(u),
                             color: '#ffffff',
                             fontWeight: 700,
                             fontSize: '12px',
@@ -688,7 +747,19 @@ export const PeopleView: React.FC = () => {
                             {u.name.charAt(0).toUpperCase()}
                           </div>
                           <div>
-                            <div style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--text)' }}>{u.name}</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--text)' }}>{u.name}</span>
+                              <span style={{
+                                fontSize: '9.5px',
+                                fontWeight: 700,
+                                letterSpacing: '0.4px',
+                                padding: '1px 6px',
+                                borderRadius: 'var(--radius-full)',
+                                ...getRoleBadgeStyle(u.role)
+                              }}>
+                                {getRoleDisplay(u)}
+                              </span>
+                            </div>
                             <div style={{ fontSize: '11.5px', color: 'var(--muted)' }}>{u.email}</div>
                           </div>
                         </div>
@@ -833,32 +904,43 @@ export const PeopleView: React.FC = () => {
                   width: '54px',
                   height: '54px',
                   borderRadius: '50%',
-                  backgroundColor: profileData.user.role === 'ceo' ? 'var(--accent-purple)' : 'var(--accent-blue)',
+                  backgroundColor: getAvatarBg(profileData.user),
                   color: '#ffffff',
                   fontWeight: 800,
                   fontSize: '22px',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center'
+                  justifyContent: 'center',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
                 }}>
                   {profileData.user.name.charAt(0).toUpperCase()}
                 </div>
 
                 <div>
-                  <h2 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text)' }}>
-                    {profileData.user.name}
+                  <h2 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span>{profileData.user.name}</span>
+                    <span style={{
+                      fontSize: '10.5px',
+                      fontWeight: 700,
+                      letterSpacing: '0.5px',
+                      padding: '2px 8px',
+                      borderRadius: 'var(--radius-full)',
+                      ...getRoleBadgeStyle(profileData.user.role)
+                    }}>
+                      {getRoleDisplay(profileData.user)}
+                    </span>
                   </h2>
-                  <p style={{ fontSize: '13px', color: 'var(--muted)' }}>
+                  <p style={{ fontSize: '13px', color: 'var(--muted)', marginTop: '2px' }}>
                     {profileData.user.designation} &bull; <strong style={{ color: 'var(--accent-green)' }}>{profileData.user.domain}</strong>
                   </p>
                 </div>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                {(currentUser?._id === profileData.user._id || currentUser?.role === 'ceo') && !isEditing && (
+                {(currentUser?._id === profileData.user._id || isExecutive) && !isEditing && (
                   <button
                     onClick={() => setIsEditing(true)}
-                    aria-label={currentUser?._id === profileData.user._id ? 'Edit your profile' : 'Admin: Edit teammate profile as CEO'}
+                    aria-label={currentUser?._id === profileData.user._id ? 'Edit your profile' : 'Executive: Edit teammate profile'}
                     style={{
                       padding: '7px 12px',
                       borderRadius: 'var(--radius-sm)',
@@ -873,7 +955,7 @@ export const PeopleView: React.FC = () => {
                     }}
                   >
                     {currentUser?._id === profileData.user._id ? <Edit2 size={13} /> : <Shield size={13} />}
-                    <span>{currentUser?._id === profileData.user._id ? 'Edit Profile' : 'Admin: Edit Teammate (CEO)'}</span>
+                    <span>{currentUser?._id === profileData.user._id ? 'Edit Profile' : 'Admin: Edit Teammate'}</span>
                   </button>
                 )}
 
@@ -1013,24 +1095,25 @@ export const PeopleView: React.FC = () => {
                   />
                 </div>
 
-                {currentUser?.role === 'ceo' && (
+                {isExecutive && (
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }} className="modal-grid-2">
                     <div>
-                      <label htmlFor="edit-role" style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Account Role (CEO Only)</label>
+                      <label htmlFor="edit-role" style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Account Role (Executive Only)</label>
                       <select
                         id="edit-role"
                         value={editRole}
                         onChange={(e) => setEditRole(e.target.value as UserRole)}
                         style={{ width: '100%', padding: '9px 12px', backgroundColor: 'var(--bg)', border: '1px solid var(--line)', borderRadius: 'var(--radius-sm)', fontSize: '13px' }}
                       >
-                        <option value="ceo">CEO (Executive Administrator)</option>
+                        <option value="founder">Founder / Co-Founder (Executive)</option>
+                        <option value="ceo">CEO (Executive Administrator - Max 1 Seat)</option>
                         <option value="manager">Manager (Department Lead)</option>
                         <option value="member">Member (Standard Teammate)</option>
                       </select>
                     </div>
 
                     <div>
-                      <label htmlFor="edit-status" style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Account Status (CEO Only)</label>
+                      <label htmlFor="edit-status" style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Account Status (Executive Only)</label>
                       <select
                         id="edit-status"
                         value={editStatus}
@@ -1061,8 +1144,8 @@ export const PeopleView: React.FC = () => {
               </div>
             ) : (
               <div>
-                {/* CEO Quick Role Assignment */}
-                {currentUser?.role === 'ceo' && (
+                {/* Executive Quick Role Assignment */}
+                {isExecutive && (
                   <div
                     style={{
                       padding: '10px 14px',
@@ -1080,7 +1163,7 @@ export const PeopleView: React.FC = () => {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <Shield size={15} color="var(--shiftpe-coral)" />
                       <span style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--text)' }}>
-                        CEO Role Assignment:
+                        Executive Role Assignment:
                       </span>
                     </div>
 
@@ -1100,7 +1183,8 @@ export const PeopleView: React.FC = () => {
                           cursor: 'pointer'
                         }}
                       >
-                        <option value="ceo">CEO (Executive Administrator)</option>
+                        <option value="founder">Founder / Co-Founder</option>
+                        <option value="ceo">CEO (Executive - Max 1 Seat)</option>
                         <option value="manager">Manager (Department Lead)</option>
                         <option value="member">Member (Standard Teammate)</option>
                       </select>
@@ -1108,17 +1192,104 @@ export const PeopleView: React.FC = () => {
                   </div>
                 )}
 
+                {/* Bio Block */}
+                {profileData.user.bio && (
+                  <div style={{
+                    marginBottom: '20px',
+                    padding: '14px 18px',
+                    backgroundColor: 'var(--bg)',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--line)',
+                    borderLeft: '4px solid var(--shiftpe-coral)'
+                  }}>
+                    <div style={{ fontSize: '11px', color: 'var(--subtle)', textTransform: 'uppercase', marginBottom: '6px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Sparkles size={13} color="var(--shiftpe-coral)" />
+                      <span>About & Mission</span>
+                    </div>
+                    <p style={{ fontSize: '13.5px', color: 'var(--text)', lineHeight: 1.6, fontStyle: 'italic', margin: 0 }}>
+                      "{profileData.user.bio}"
+                    </p>
+                  </div>
+                )}
+
                 {/* Contact & Info Grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '24px' }} className="modal-grid-2">
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '18px' }} className="modal-grid-2">
                   <div style={{ padding: '12px 16px', backgroundColor: 'var(--bg)', borderRadius: 'var(--radius-md)', border: '1px solid var(--line)' }}>
-                    <div style={{ fontSize: '11px', color: 'var(--subtle)', textTransform: 'uppercase', marginBottom: '4px' }}>Company Mailbox</div>
+                    <div style={{ fontSize: '11px', color: 'var(--subtle)', textTransform: 'uppercase', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <Mail size={12} color="var(--subtle)" />
+                      <span>Company Mailbox</span>
+                    </div>
                     <div style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--text)' }}>{profileData.user.email}</div>
                   </div>
 
                   <div style={{ padding: '12px 16px', backgroundColor: 'var(--bg)', borderRadius: 'var(--radius-md)', border: '1px solid var(--line)' }}>
-                    <div style={{ fontSize: '11px', color: 'var(--subtle)', textTransform: 'uppercase', marginBottom: '4px' }}>Direct Phone</div>
+                    <div style={{ fontSize: '11px', color: 'var(--subtle)', textTransform: 'uppercase', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <Phone size={12} color="var(--subtle)" />
+                      <span>Direct Phone</span>
+                    </div>
                     <div style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--text)' }}>{profileData.user.phone || 'Not configured'}</div>
                   </div>
+                </div>
+
+                {/* Workplace & Location Details */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px', marginBottom: '24px' }}>
+                  <div style={{ padding: '12px 16px', backgroundColor: 'var(--bg)', borderRadius: 'var(--radius-md)', border: '1px solid var(--line)' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--subtle)', textTransform: 'uppercase', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <MapPin size={12} color="var(--subtle)" />
+                      <span>Work Location</span>
+                    </div>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>
+                      {profileData.user.location || 'ShiftPe HQ'}
+                      {profileData.user.workMode && (
+                        <span style={{ marginLeft: '6px', fontSize: '11px', color: 'var(--accent-green)', textTransform: 'capitalize' }}>
+                          ({profileData.user.workMode})
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div style={{ padding: '12px 16px', backgroundColor: 'var(--bg)', borderRadius: 'var(--radius-md)', border: '1px solid var(--line)' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--subtle)', textTransform: 'uppercase', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <Clock size={12} color="var(--subtle)" />
+                      <span>Working Hours</span>
+                    </div>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>
+                      {profileData.user.workingHours || '10:00 AM - 7:00 PM IST'}
+                    </div>
+                  </div>
+
+                  {(profileData.user.linkedin || profileData.user.github) && (
+                    <div style={{ padding: '12px 16px', backgroundColor: 'var(--bg)', borderRadius: 'var(--radius-md)', border: '1px solid var(--line)' }}>
+                      <div style={{ fontSize: '11px', color: 'var(--subtle)', textTransform: 'uppercase', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <Globe size={12} color="var(--subtle)" />
+                        <span>Social Links</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        {profileData.user.linkedin && (
+                          <a
+                            href={profileData.user.linkedin}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#0a66c2', fontSize: '12px', fontWeight: 600, textDecoration: 'none' }}
+                          >
+                            <Linkedin size={13} />
+                            <span>LinkedIn</span>
+                          </a>
+                        )}
+                        {profileData.user.github && (
+                          <a
+                            href={profileData.user.github}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text)', fontSize: '12px', fontWeight: 600, textDecoration: 'none' }}
+                          >
+                            <Github size={13} />
+                            <span>GitHub</span>
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Skills */}
@@ -1127,24 +1298,30 @@ export const PeopleView: React.FC = () => {
                     Technical Core Skills
                   </h4>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                    {profileData.user.skills?.map((sk, idx) => (
-                      <span key={idx} style={{ padding: '4px 10px', backgroundColor: 'var(--bg)', border: '1px solid var(--line)', borderRadius: 'var(--radius-sm)', fontSize: '12px', color: 'var(--text)' }}>
-                        {sk}
+                    {profileData.user.skills && profileData.user.skills.length > 0 ? (
+                      profileData.user.skills.map((sk, idx) => (
+                        <span key={idx} style={{ padding: '4px 10px', backgroundColor: 'var(--bg)', border: '1px solid var(--line)', borderRadius: 'var(--radius-sm)', fontSize: '12px', color: 'var(--text)' }}>
+                          {sk}
+                        </span>
+                      ))
+                    ) : (
+                      <span style={{ fontSize: '12px', color: 'var(--muted)', fontStyle: 'italic' }}>
+                        No technical skills specified yet.
                       </span>
-                    ))}
+                    )}
                   </div>
                 </div>
 
-                {/* Chain to CEO Hierarchy */}
+                {/* Chain to Leadership Hierarchy */}
                 <div style={{ marginBottom: '24px', backgroundColor: 'var(--bg)', borderRadius: 'var(--radius-md)', padding: '16px', border: '1px solid var(--line)' }}>
                   <h4 style={{ fontSize: '12.5px', textTransform: 'uppercase', color: 'var(--subtle)', letterSpacing: '0.8px', marginBottom: '12px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <Network size={14} color="var(--shiftpe-coral)" />
-                    <span>Chain to CEO</span>
+                    <span>Executive Reporting Line</span>
                   </h4>
 
                   {profileData.chainToCeo.length === 0 ? (
                     <div style={{ fontSize: '13px', color: 'var(--accent-green)', fontWeight: 600 }}>
-                      This profile is the top-level Founder / CEO of ShiftPe.
+                      This profile is a top-level Founder / Executive Leader of ShiftPe.
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -1154,7 +1331,7 @@ export const PeopleView: React.FC = () => {
                       {profileData.chainToCeo.map((node, i) => (
                         <div key={node._id} style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingLeft: `${(i + 1) * 16}px` }}>
                           <span style={{ color: 'var(--shiftpe-coral)' }}>&uarr; reports to</span>
-                          <span style={{ fontSize: '13px', color: node.role === 'ceo' ? 'var(--accent-green)' : 'var(--text)', fontWeight: 600 }}>
+                          <span style={{ fontSize: '13px', color: node.role === 'founder' ? 'var(--shiftpe-coral)' : node.role === 'ceo' ? 'var(--accent-green)' : 'var(--text)', fontWeight: 600 }}>
                             {node.name} &bull; <span style={{ color: 'var(--muted)', fontSize: '12px' }}>{node.designation}</span>
                           </span>
                         </div>

@@ -1,6 +1,6 @@
 import mongoose, { Document, Schema, Types } from 'mongoose';
 
-export type UserRole = 'member' | 'manager' | 'ceo';
+export type UserRole = 'member' | 'manager' | 'ceo' | 'founder';
 export type UserStatus = 'active' | 'inactive';
 
 export interface IUser extends Document {
@@ -15,6 +15,14 @@ export interface IUser extends Document {
   reportsTo?: Types.ObjectId | null;
   skills: string[];
   phone: string;
+  bio?: string;
+  location?: string;
+  workMode?: 'office' | 'hybrid' | 'remote';
+  linkedin?: string;
+  github?: string;
+  workingHours?: string;
+  emergencyContact?: string;
+  avatarColor?: string;
   joinDate: Date;
   status: UserStatus;
   onboardingCompleted: boolean;
@@ -47,7 +55,7 @@ const userSchema = new Schema<IUser>(
     totpEnabled: { type: Boolean, default: false },
     role: {
       type: String,
-      enum: ['member', 'manager', 'ceo'],
+      enum: ['member', 'manager', 'ceo', 'founder'],
       default: 'member',
       required: true
     },
@@ -56,6 +64,14 @@ const userSchema = new Schema<IUser>(
     reportsTo: { type: Schema.Types.ObjectId, ref: 'User', default: null },
     skills: { type: [String], default: [] },
     phone: { type: String, default: '', trim: true },
+    bio: { type: String, default: '', trim: true },
+    location: { type: String, default: 'Bengaluru HQ', trim: true },
+    workMode: { type: String, enum: ['office', 'hybrid', 'remote'], default: 'office' },
+    linkedin: { type: String, default: '', trim: true },
+    github: { type: String, default: '', trim: true },
+    workingHours: { type: String, default: '09:30 AM - 06:30 PM IST', trim: true },
+    emergencyContact: { type: String, default: '', trim: true },
+    avatarColor: { type: String, default: '#ff5f55', trim: true },
     joinDate: { type: Date, default: Date.now },
     onboardingCompleted: { type: Boolean, default: false },
     onboardingSkipped: { type: Boolean, default: false },

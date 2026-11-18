@@ -7,7 +7,7 @@ interface CorporateAccountConfig {
   email: string;
   name: string;
   passwordPlainText: string;
-  role: 'member' | 'manager' | 'ceo';
+  role: 'member' | 'manager' | 'ceo' | 'founder';
   designation: string;
   domain: string;
   skills: string[];
@@ -18,7 +18,7 @@ export const CORPORATE_ACCOUNTS: CorporateAccountConfig[] = [
     email: 'ajay.founder@shiftpe.in',
     name: 'Ajay',
     passwordPlainText: 'Sar@98112002',
-    role: 'ceo',
+    role: 'founder',
     designation: 'Founder',
     domain: 'Executive',
     skills: ['Leadership', 'Product Strategy', 'FinTech', 'Operations']
@@ -27,7 +27,7 @@ export const CORPORATE_ACCOUNTS: CorporateAccountConfig[] = [
     email: 'ritesh.founder@shiftpe.in',
     name: 'Ritesh',
     passwordPlainText: 'Rit@84912026',
-    role: 'ceo',
+    role: 'founder',
     designation: 'Co-Founder & Product Lead',
     domain: 'Executive',
     skills: ['Product Management', 'Strategy', 'UI/UX', 'Operations']
@@ -72,7 +72,7 @@ export const CORPORATE_ACCOUNTS: CorporateAccountConfig[] = [
     email: 'founders@shiftpe.in',
     name: 'ShiftPe Founders Office',
     passwordPlainText: 'Fnd@82052026',
-    role: 'ceo',
+    role: 'founder',
     designation: 'Founders Office',
     domain: 'Executive',
     skills: ['Executive Strategy', 'Governance', 'Fundraising', 'Operations']
@@ -82,6 +82,11 @@ export const CORPORATE_ACCOUNTS: CorporateAccountConfig[] = [
 export async function setupCorporateAccounts(): Promise<void> {
   console.log('[Corporate Setup] Connecting to database...');
   await connectDB();
+
+  // Remove old legacy/duplicate accounts to ensure strict single-CEO / blank CEO consistency
+  await User.deleteMany({ email: 'ceo@shiftpe.com' });
+  await DirectoryAccess.deleteMany({ email: 'ceo@shiftpe.com' });
+  console.log('[Corporate Setup] Purged legacy ceo@shiftpe.com duplicate.');
 
   console.log(`[Corporate Setup] Setting up ${CORPORATE_ACCOUNTS.length} corporate accounts...`);
 

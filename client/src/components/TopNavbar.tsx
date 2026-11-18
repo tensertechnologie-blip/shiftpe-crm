@@ -80,7 +80,8 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
   const navRef = useRef<HTMLDivElement>(null);
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const isCeo = user?.role === 'ceo';
+  const isExecutive = user?.role === 'ceo' || user?.role === 'founder';
+  const isCeo = isExecutive;
 
   // Live real-time clock ticker like "The Dot"
   useEffect(() => {
@@ -674,8 +675,28 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
                         textTransform: 'uppercase',
                         padding: '2px 8px',
                         borderRadius: 'var(--radius-full)',
-                        backgroundColor: isCeo ? 'var(--shiftpe-coral-light)' : 'rgba(59, 130, 246, 0.15)',
-                        color: isCeo ? 'var(--shiftpe-coral)' : 'var(--accent-blue)'
+                        backgroundColor:
+                          user?.role === 'founder'
+                            ? 'rgba(255, 95, 85, 0.15)'
+                            : user?.role === 'ceo'
+                            ? 'rgba(180, 0, 255, 0.15)'
+                            : user?.role === 'manager'
+                            ? 'var(--shiftpe-coral-light)'
+                            : 'rgba(59, 130, 246, 0.15)',
+                        color:
+                          user?.role === 'founder'
+                            ? 'var(--shiftpe-coral)'
+                            : user?.role === 'ceo'
+                            ? '#d47aff'
+                            : user?.role === 'manager'
+                            ? 'var(--shiftpe-coral)'
+                            : 'var(--accent-blue)',
+                        border:
+                          user?.role === 'founder'
+                            ? '1px solid var(--shiftpe-coral-border)'
+                            : user?.role === 'ceo'
+                            ? '1px solid rgba(180, 0, 255, 0.3)'
+                            : '1px solid var(--line)'
                       }}
                     >
                       {user?.role}
