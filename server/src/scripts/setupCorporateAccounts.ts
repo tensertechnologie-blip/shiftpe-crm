@@ -19,7 +19,7 @@ export const CORPORATE_ACCOUNTS: CorporateAccountConfig[] = [
     name: 'Ajay',
     passwordPlainText: 'Sar@98112002',
     role: 'ceo',
-    designation: 'Founder & CEO',
+    designation: 'Founder',
     domain: 'Executive',
     skills: ['Leadership', 'Product Strategy', 'FinTech', 'Operations']
   },

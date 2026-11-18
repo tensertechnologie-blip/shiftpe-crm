@@ -21,12 +21,34 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   const [designation, setDesignation] = useState('');
   const [domain, setDomain] = useState('');
   const [role, setRole] = useState<'ceo' | 'member'>('member');
+  const [reportsTo, setReportsTo] = useState<string>('');
+  const [teammates, setTeammates] = useState<Array<{ _id: string; name: string; designation: string; domain: string }>>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
   const modalRef = useRef<HTMLDivElement>(null);
   const isCeo = user?.role === 'ceo';
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const fetchTeammates = async () => {
+      try {
+        const res = await fetch('/api/users', {
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: 'include'
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const list = (data.users || []).filter((u: any) => u._id !== user?._id && u.status === 'active');
+          setTeammates(list);
+        }
+      } catch (err) {
+        console.error('Failed to load teammates:', err);
+      }
+    };
+    fetchTeammates();
+  }, [isOpen, token, user?._id]);
 
   useEffect(() => {
     if (user) {
@@ -36,6 +58,8 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
       setDesignation(user.designation || '');
       setDomain(user.domain || 'Engineering');
       setRole((user.role as 'ceo' | 'member') || 'member');
+      const rId = typeof user.reportsTo === 'object' && user.reportsTo ? (user.reportsTo as any)._id : (user.reportsTo || '');
+      setReportsTo(rId);
     }
   }, [user, isOpen]);
 
@@ -85,12 +109,13 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
     const payload: any = {
       name: name.trim(),
       phone: phone.trim(),
+      designation: designation.trim(),
+      domain: domain.trim(),
+      reportsTo: reportsTo ? reportsTo : null,
       skills: skills.split(',').map((s) => s.trim()).filter(Boolean)
     };
 
     if (isCeo) {
-      payload.designation = designation.trim();
-      payload.domain = domain;
       payload.role = role;
     }
 
@@ -312,125 +337,118 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                 htmlFor="profile-domain"
                 style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, color: 'var(--text)', marginBottom: '6px' }}
               >
-                Domain {isCeo && <span style={{ color: 'var(--shiftpe-coral)' }}>(CEO)</span>}
+                Domain / Department
               </label>
-              {isCeo ? (
-                <select
-                  id="profile-domain"
-                  value={domain}
-                  onChange={(e) => setDomain(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '10px 14px',
-                    borderRadius: 'var(--radius-sm)',
-                    border: '1px solid var(--line)',
-                    backgroundColor: 'var(--surface-subtle)',
-                    color: 'var(--text)',
-                    fontSize: '13px'
-                  }}
-                >
-                  <option value="Engineering">Engineering</option>
-                  <option value="Design">Design</option>
-                  <option value="Marketing">Marketing</option>
-                  <option value="Operations">Operations</option>
-                  <option value="Sales">Sales</option>
-                  <option value="Executive">Executive</option>
-                </select>
-              ) : (
-                <input
-                  id="profile-domain"
-                  type="text"
-                  value={domain}
-                  disabled
-                  style={{
-                    width: '100%',
-                    padding: '10px 14px',
-                    borderRadius: 'var(--radius-sm)',
-                    border: '1px solid var(--line)',
-                    backgroundColor: 'var(--bg)',
-                    color: 'var(--muted)',
-                    fontSize: '13px',
-                    cursor: 'not-allowed'
-                  }}
-                />
-              )}
+              <select
+                id="profile-domain"
+                value={domain}
+                onChange={(e) => setDomain(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--line)',
+                  backgroundColor: 'var(--surface-subtle)',
+                  color: 'var(--text)',
+                  fontSize: '13px'
+                }}
+              >
+                <option value="Engineering">Engineering</option>
+                <option value="Design">Design</option>
+                <option value="Marketing">Marketing</option>
+                <option value="Operations">Operations</option>
+                <option value="Sales">Sales</option>
+                <option value="Executive">Executive</option>
+              </select>
             </div>
           </div>
 
-          {/* Designation & Role (CEO Controls) */}
+          {/* Designation & Reports To */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }} className="modal-grid-2">
             <div>
               <label
                 htmlFor="profile-designation"
                 style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, color: 'var(--text)', marginBottom: '6px' }}
               >
-                Designation {isCeo && <span style={{ color: 'var(--shiftpe-coral)' }}>(CEO)</span>}
+                Designation
               </label>
               <input
                 id="profile-designation"
                 type="text"
                 value={designation}
-                disabled={!isCeo}
                 onChange={(e) => setDesignation(e.target.value)}
-                placeholder="e.g. Founder"
+                placeholder="e.g. Founder, Lead Engineer, Designer"
                 style={{
                   width: '100%',
                   padding: '10px 14px',
                   borderRadius: 'var(--radius-sm)',
                   border: '1px solid var(--line)',
-                  backgroundColor: isCeo ? 'var(--surface-subtle)' : 'var(--bg)',
-                  color: isCeo ? 'var(--text)' : 'var(--muted)',
-                  fontSize: '13px',
-                  cursor: isCeo ? 'text' : 'not-allowed'
+                  backgroundColor: 'var(--surface-subtle)',
+                  color: 'var(--text)',
+                  fontSize: '13px'
                 }}
               />
             </div>
 
             <div>
               <label
+                htmlFor="profile-reports-to"
+                style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, color: 'var(--text)', marginBottom: '6px' }}
+              >
+                Reports To
+              </label>
+              <select
+                id="profile-reports-to"
+                value={reportsTo}
+                onChange={(e) => setReportsTo(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--line)',
+                  backgroundColor: 'var(--surface-subtle)',
+                  color: 'var(--text)',
+                  fontSize: '13px'
+                }}
+              >
+                <option value="">None (Top Level / Direct Founder)</option>
+                {teammates.map((t) => (
+                  <option key={t._id} value={t._id}>
+                    {t.name} ({t.designation || t.domain})
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Account Role (Only shown to CEO Administrator) */}
+          {isCeo && (
+            <div>
+              <label
                 htmlFor="profile-role"
                 style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, color: 'var(--text)', marginBottom: '6px' }}
               >
-                Account Role {isCeo && <span style={{ color: 'var(--shiftpe-coral)' }}>(CEO)</span>}
+                Account Role <span style={{ color: 'var(--shiftpe-coral)' }}>(CEO)</span>
               </label>
-              {isCeo ? (
-                <select
-                  id="profile-role"
-                  value={role}
-                  onChange={(e) => setRole(e.target.value as any)}
-                  style={{
-                    width: '100%',
-                    padding: '10px 14px',
-                    borderRadius: 'var(--radius-sm)',
-                    border: '1px solid var(--line)',
-                    backgroundColor: 'var(--surface-subtle)',
-                    color: 'var(--text)',
-                    fontSize: '13px'
-                  }}
-                >
-                  <option value="ceo">CEO (Executive Administrator)</option>
-                  <option value="member">Member (Standard Teammate)</option>
-                </select>
-              ) : (
-                <input
-                  id="profile-role"
-                  type="text"
-                  value={role === 'ceo' ? 'Executive CEO' : 'Standard Member'}
-                  disabled
-                  style={{
-                    width: '100%',
-                    padding: '10px 14px',
-                    borderRadius: 'var(--radius-sm)',
-                    border: '1px solid var(--line)',
-                    backgroundColor: 'var(--bg)',
-                    color: 'var(--muted)',
-                    fontSize: '13px',
-                    cursor: 'not-allowed'
-                  }}
-                />
-              )}
+              <select
+                id="profile-role"
+                value={role}
+                onChange={(e) => setRole(e.target.value as any)}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--line)',
+                  backgroundColor: 'var(--surface-subtle)',
+                  color: 'var(--text)',
+                  fontSize: '13px'
+                }}
+              >
+                <option value="ceo">CEO (Executive Administrator)</option>
+                <option value="member">Member (Standard Teammate)</option>
+              </select>
             </div>
-          </div>
+          )}
 
           {/* Core Skills */}
           <div>

@@ -173,39 +173,46 @@ export async function updateUser(req: AuthenticatedRequest, res: Response): Prom
     const previousRole = targetUser.role;
     const previousStatus = targetUser.status;
 
-    // Both CEO and self can update name, phone, and skills
+    // Both CEO and self can update profile details: name, phone, skills, designation, domain, and reportsTo
     if (name !== undefined) targetUser.name = name.trim();
     if (phone !== undefined) targetUser.phone = phone.trim();
     if (skills !== undefined && Array.isArray(skills)) targetUser.skills = skills;
+    if (designation !== undefined) targetUser.designation = designation.trim();
+    if (domain !== undefined) targetUser.domain = domain.trim();
 
-    // Only CEO can update organizational fields
+    if (reportsTo !== undefined) {
+      if (reportsTo === null || reportsTo === '' || reportsTo === 'none') {
+        targetUser.reportsTo = null;
+      } else {
+        if (!mongoose.Types.ObjectId.isValid(reportsTo)) {
+          res.status(400).json({ error: 'Invalid reportsTo user ID' });
+          return;
+        }
+
+        // Validate that target manager exists and is active within the organization
+        const managerUser = await User.findById(reportsTo);
+        if (!managerUser || managerUser.status !== 'active') {
+          res.status(400).json({ error: 'Selected manager does not exist or is inactive' });
+          return;
+        }
+
+        // Cycle check
+        const isCycle = await wouldCreateReportingCycle(id, reportsTo);
+        if (isCycle) {
+          res.status(400).json({
+            error: 'Invalid hierarchy: A circular reporting relationship was detected. A teammate cannot report to their own direct or indirect subordinate.'
+          });
+          return;
+        }
+
+        targetUser.reportsTo = new mongoose.Types.ObjectId(reportsTo);
+      }
+    }
+
+    // Only CEO can update account status and security role
     if (isCeo) {
-      if (designation !== undefined) targetUser.designation = designation;
-      if (domain !== undefined) targetUser.domain = domain;
       if (status !== undefined) targetUser.status = status;
       if (role !== undefined) targetUser.role = role;
-
-      if (reportsTo !== undefined) {
-        if (reportsTo === null || reportsTo === '') {
-          targetUser.reportsTo = null;
-        } else {
-          if (!mongoose.Types.ObjectId.isValid(reportsTo)) {
-            res.status(400).json({ error: 'Invalid reportsTo user ID' });
-            return;
-          }
-
-          // Cycle check
-          const isCycle = await wouldCreateReportingCycle(id, reportsTo);
-          if (isCycle) {
-            res.status(400).json({
-              error: 'Invalid hierarchy: A circular reporting relationship was detected. A teammate cannot report to their own direct or indirect subordinate.'
-            });
-            return;
-          }
-
-          targetUser.reportsTo = new mongoose.Types.ObjectId(reportsTo);
-        }
-      }
     }
 
     await targetUser.save();

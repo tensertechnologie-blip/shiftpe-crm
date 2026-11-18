@@ -18,6 +18,7 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
+  Shield,
   ChevronLeft
 } from 'lucide-react';
 
@@ -194,15 +195,15 @@ export const PeopleView: React.FC = () => {
     const payload: any = {
       name: editName.trim(),
       phone: editPhone.trim(),
-      skills: editSkills.split(',').map((s) => s.trim()).filter(Boolean)
+      skills: editSkills.split(',').map((s) => s.trim()).filter(Boolean),
+      designation: editDesignation.trim(),
+      domain: editDomain,
+      reportsTo: editReportsTo ? editReportsTo : null
     };
 
     if (currentUser?.role === 'ceo') {
-      payload.designation = editDesignation.trim();
-      payload.domain = editDomain;
       payload.status = editStatus;
       payload.role = editRole;
-      payload.reportsTo = editReportsTo ? editReportsTo : null;
     }
 
     try {
@@ -801,10 +802,10 @@ export const PeopleView: React.FC = () => {
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                {(currentUser?.role === 'ceo' || currentUser?._id === profileData.user._id) && !isEditing && (
+                {(currentUser?._id === profileData.user._id || currentUser?.role === 'ceo') && !isEditing && (
                   <button
                     onClick={() => setIsEditing(true)}
-                    aria-label={currentUser?._id === profileData.user._id ? 'Edit your profile' : 'Edit teammate profile as CEO'}
+                    aria-label={currentUser?._id === profileData.user._id ? 'Edit your profile' : 'Admin: Edit teammate profile as CEO'}
                     style={{
                       padding: '7px 12px',
                       borderRadius: 'var(--radius-sm)',
@@ -818,8 +819,8 @@ export const PeopleView: React.FC = () => {
                       gap: '6px'
                     }}
                   >
-                    <Edit2 size={13} />
-                    <span>{currentUser?._id === profileData.user._id ? 'Edit Profile' : 'Edit Teammate (CEO)'}</span>
+                    {currentUser?._id === profileData.user._id ? <Edit2 size={13} /> : <Shield size={13} />}
+                    <span>{currentUser?._id === profileData.user._id ? 'Edit Profile' : 'Admin: Edit Teammate (CEO)'}</span>
                   </button>
                 )}
 
@@ -866,8 +867,8 @@ export const PeopleView: React.FC = () => {
                   fontWeight: 600
                 }}>
                   {currentUser?._id === profileData.user._id
-                    ? 'Editing Your Profile: Update your full name, phone number, and core skills.'
-                    : 'Editing Teammate Profile: As CEO Administrator, you can update organizational attributes, designation, and roles.'}
+                    ? 'Editing Your Profile: Update your full name, designation, department domain, reporting line, and specialties within the organization.'
+                    : `Administrator Override: You are editing administrative settings for ${profileData.user.name}.`}
                 </div>
 
                 <div>
@@ -877,7 +878,7 @@ export const PeopleView: React.FC = () => {
                     type="text"
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
-                    placeholder="e.g. Ajay Founder"
+                    placeholder="e.g. Ajay"
                     required
                     style={{ width: '100%', padding: '9px 12px', backgroundColor: 'var(--bg)', border: '1px solid var(--line)', borderRadius: 'var(--radius-sm)', fontSize: '13px' }}
                   />
@@ -897,83 +898,81 @@ export const PeopleView: React.FC = () => {
                   </div>
 
                   <div>
-                    <label htmlFor="edit-skills" style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Skills (comma separated)</label>
-                    <input
-                      id="edit-skills"
-                      type="text"
-                      value={editSkills}
-                      onChange={(e) => setEditSkills(e.target.value)}
-                      placeholder="React, Node.js, Design"
+                    <label htmlFor="edit-domain" style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Domain / Department</label>
+                    <select
+                      id="edit-domain"
+                      value={editDomain}
+                      onChange={(e) => setEditDomain(e.target.value)}
                       style={{ width: '100%', padding: '9px 12px', backgroundColor: 'var(--bg)', border: '1px solid var(--line)', borderRadius: 'var(--radius-sm)', fontSize: '13px' }}
-                    />
+                    >
+                      <option value="Engineering">Engineering</option>
+                      <option value="Design">Design</option>
+                      <option value="Marketing">Marketing</option>
+                      <option value="Operations">Operations</option>
+                      <option value="Sales">Sales</option>
+                      <option value="Executive">Executive</option>
+                    </select>
                   </div>
                 </div>
 
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }} className="modal-grid-2">
+                  <div>
+                    <label htmlFor="edit-designation" style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Designation</label>
+                    <input
+                      id="edit-designation"
+                      type="text"
+                      value={editDesignation}
+                      onChange={(e) => setEditDesignation(e.target.value)}
+                      placeholder="e.g. Founder, Growth Lead, Senior Backend Engineer"
+                      style={{ width: '100%', padding: '9px 12px', backgroundColor: 'var(--bg)', border: '1px solid var(--line)', borderRadius: 'var(--radius-sm)', fontSize: '13px' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="edit-reports-to" style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Reports To (Within Organization)</label>
+                    <select
+                      id="edit-reports-to"
+                      value={editReportsTo}
+                      onChange={(e) => setEditReportsTo(e.target.value)}
+                      style={{ width: '100%', padding: '9px 12px', backgroundColor: 'var(--bg)', border: '1px solid var(--line)', borderRadius: 'var(--radius-sm)', fontSize: '13px' }}
+                    >
+                      <option value="">None (Top Level / Direct Founder)</option>
+                      {users
+                        .filter((u) => u._id !== selectedProfileId)
+                        .map((u) => (
+                          <option key={u._id} value={u._id}>
+                            {u.name} ({u.designation || u.domain})
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="edit-skills" style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Skills (comma separated)</label>
+                  <input
+                    id="edit-skills"
+                    type="text"
+                    value={editSkills}
+                    onChange={(e) => setEditSkills(e.target.value)}
+                    placeholder="React, Node.js, Design"
+                    style={{ width: '100%', padding: '9px 12px', backgroundColor: 'var(--bg)', border: '1px solid var(--line)', borderRadius: 'var(--radius-sm)', fontSize: '13px' }}
+                  />
+                </div>
+
                 {currentUser?.role === 'ceo' && (
-                  <>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }} className="modal-grid-2">
-                      <div>
-                        <label htmlFor="edit-role" style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Account Role (CEO Only)</label>
-                        <select
-                          id="edit-role"
-                          value={editRole}
-                          onChange={(e) => setEditRole(e.target.value as any)}
-                          style={{ width: '100%', padding: '9px 12px', backgroundColor: 'var(--bg)', border: '1px solid var(--line)', borderRadius: 'var(--radius-sm)', fontSize: '13px' }}
-                        >
-                          <option value="ceo">CEO (Executive Administrator)</option>
-                          <option value="member">Member (Standard Teammate)</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label htmlFor="edit-designation" style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Designation (CEO Only)</label>
-                        <input
-                          id="edit-designation"
-                          type="text"
-                          value={editDesignation}
-                          onChange={(e) => setEditDesignation(e.target.value)}
-                          placeholder="e.g. Founder"
-                          style={{ width: '100%', padding: '9px 12px', backgroundColor: 'var(--bg)', border: '1px solid var(--line)', borderRadius: 'var(--radius-sm)', fontSize: '13px' }}
-                        />
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }} className="modal-grid-2">
-                      <div>
-                        <label htmlFor="edit-domain" style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Domain (CEO Only)</label>
-                        <select
-                          id="edit-domain"
-                          value={editDomain}
-                          onChange={(e) => setEditDomain(e.target.value)}
-                          style={{ width: '100%', padding: '9px 12px', backgroundColor: 'var(--bg)', border: '1px solid var(--line)', borderRadius: 'var(--radius-sm)', fontSize: '13px' }}
-                        >
-                          <option value="Engineering">Engineering</option>
-                          <option value="Design">Design</option>
-                          <option value="Marketing">Marketing</option>
-                          <option value="Operations">Operations</option>
-                          <option value="Sales">Sales</option>
-                          <option value="Executive">Executive</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label htmlFor="edit-reports-to" style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Reports To (CEO Only)</label>
-                        <select
-                          id="edit-reports-to"
-                          value={editReportsTo}
-                          onChange={(e) => setEditReportsTo(e.target.value)}
-                          style={{ width: '100%', padding: '9px 12px', backgroundColor: 'var(--bg)', border: '1px solid var(--line)', borderRadius: 'var(--radius-sm)', fontSize: '13px' }}
-                        >
-                          <option value="">None (Top Level / Self)</option>
-                          {users
-                            .filter((u) => u._id !== selectedProfileId)
-                            .map((u) => (
-                              <option key={u._id} value={u._id}>
-                                {u.name} ({u.designation})
-                              </option>
-                            ))}
-                        </select>
-                      </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }} className="modal-grid-2">
+                    <div>
+                      <label htmlFor="edit-role" style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Account Role (CEO Only)</label>
+                      <select
+                        id="edit-role"
+                        value={editRole}
+                        onChange={(e) => setEditRole(e.target.value as any)}
+                        style={{ width: '100%', padding: '9px 12px', backgroundColor: 'var(--bg)', border: '1px solid var(--line)', borderRadius: 'var(--radius-sm)', fontSize: '13px' }}
+                      >
+                        <option value="ceo">CEO (Executive Administrator)</option>
+                        <option value="member">Member (Standard Teammate)</option>
+                      </select>
                     </div>
 
                     <div>
@@ -988,7 +987,7 @@ export const PeopleView: React.FC = () => {
                         <option value="inactive">Inactive</option>
                       </select>
                     </div>
-                  </>
+                  </div>
                 )}
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>

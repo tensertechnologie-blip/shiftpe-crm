@@ -359,7 +359,7 @@ export const DotDashboardView: React.FC<DotDashboardViewProps> = ({
               }}
             >
               <Radio size={12} color="var(--shiftpe-coral)" />
-              Ajay (Founder & CEO)
+              {user?.name || 'Ajay'} ({user?.designation || 'Founder'})
             </div>
           </div>
 

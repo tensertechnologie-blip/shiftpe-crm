@@ -108,14 +108,15 @@ describe('Phase 2 & Phase 3 Test Suite: People Hierarchy, Org Tree, Attendance &
     expect(res.body.error).toMatch(/circular reporting relationship was detected/i);
   });
 
-  test('P2.2: Members can ONLY edit their own phone and skills, not designation or role', async () => {
+  test('P2.2: Teammates can edit their own profile details (phone, skills, designation, domain), but NOT their role', async () => {
     const res = await request(app)
       .patch(`/api/users/${memberUser._id}`)
       .set('Authorization', `Bearer ${memberToken}`)
       .send({
         phone: '+91 9999900000',
         skills: ['React', 'TypeScript', 'Jest'],
-        designation: 'Hacked Vice President',
+        designation: 'Senior Frontend Engineer',
+        domain: 'Engineering',
         role: 'ceo'
       });
 
@@ -124,8 +125,10 @@ describe('Phase 2 & Phase 3 Test Suite: People Hierarchy, Org Tree, Attendance &
     const updated = await User.findById(memberUser._id);
     expect(updated?.phone).toBe('+91 9999900000');
     expect(updated?.skills).toEqual(['React', 'TypeScript', 'Jest']);
-    // Designation and role must NOT have changed
-    expect(updated?.designation).toBe('Frontend Engineer');
+    // Designation and domain update successfully for the teammate
+    expect(updated?.designation).toBe('Senior Frontend Engineer');
+    expect(updated?.domain).toBe('Engineering');
+    // Role must NOT have changed (security boundary preserved)
     expect(updated?.role).toBe('member');
   });
 
